@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Meu Perfil - HOS Jiu-Jitsu</title>
+<link rel="icon" type="image/png" href="../assets/logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+
+<header class="app-header">
+  <div class="logo-wrap">
+    <img src="../assets/logo.png" alt="Logo">
+    <h1 id="saudacao">Área do Aluno</h1>
+  </div>
+  <span class="sair" id="btn-sair">Sair</span>
+</header>
+
+<main class="app-main">
+  <div class="card">
+    <h2>Meus dados</h2>
+    <div id="perfil-conteudo">
+      <p style="color:var(--text-dim);">Carregando...</p>
+    </div>
+  </div>
+</main>
+
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script src="firebase-init.js"></script>
+<script>
+const btnSair = document.getElementById("btn-sair");
+const saudacao = document.getElementById("saudacao");
+const perfilConteudo = document.getElementById("perfil-conteudo");
+
+btnSair.addEventListener("click", () => auth.signOut().then(() => window.location.href = "login.html"));
+
+auth.onAuthStateChanged(async (user) => {
+  if (!user) {
+    window.location.href = "login.html";
+    return;
+  }
+
+  const doc = await db.collection("alunos").doc(user.uid).get();
+  if (!doc.exists) {
+    perfilConteudo.textContent = "Cadastro não encontrado.";
+    return;
+  }
+
+  const aluno = doc.data();
+  saudacao.textContent = "Olá, " + aluno.nomeCompleto.split(" ")[0];
+
+  // Nunca usar innerHTML com dados do aluno (conteúdo livre, digitado por ele) —
+  // cada valor é sempre atribuído via textContent, que escapa qualquer HTML/script.
+  perfilConteudo.innerHTML = "";
+
+  const linhas = [
+    ["Nome completo", aluno.nomeCompleto],
+    ["Responsável", aluno.nomeResponsavel],
+    ["RG ou CPF", aluno.documento],
+    ["Telefone do aluno", aluno.telefoneAluno || "-"],
+    ["Telefone do responsável", aluno.telefoneResponsavel || "-"],
+    ["E-mail", aluno.email]
+  ];
+
+  linhas.forEach(([label, valor]) => {
+    const row = document.createElement("div");
+    row.className = "profile-row";
+    const spanLabel = document.createElement("span");
+    spanLabel.className = "label";
+    spanLabel.textContent = label;
+    const spanValue = document.createElement("span");
+    spanValue.className = "value";
+    spanValue.textContent = valor;
+    row.append(spanLabel, spanValue);
+    perfilConteudo.appendChild(row);
+  });
+
+  const rowFaixa = document.createElement("div");
+  rowFaixa.className = "profile-row";
+  const labelFaixa = document.createElement("span");
+  labelFaixa.className = "label";
+  labelFaixa.textContent = "Graduação (faixa)";
+  const beltTag = document.createElement("span");
+  beltTag.className = "belt-tag";
+  beltTag.textContent = aluno.faixa;
+  rowFaixa.append(labelFaixa, beltTag);
+  perfilConteudo.appendChild(rowFaixa);
+});
+</script>
+</body>
+</html>

@@ -2,19 +2,31 @@
 
 Site de divulgação do projeto social **HOS Jiu-Jitsu (Hungria Old School)**, aulas gratuitas de jiu-jitsu para crianças e adolescentes no Distrito de Rechan, interior de São Paulo.
 
-Site estático simples (HTML + CSS + JS puro), sem dependências de build — pode ser publicado direto no GitHub Pages ou na Vercel.
+Site estático simples (HTML + CSS + JS puro), sem dependências de build — pode ser publicado direto no GitHub Pages ou na Vercel. A partir de 2026-08, tem também uma **Área do Aluno** com cadastro/login, usando **Firebase** (Authentication + Firestore) como backend — funciona igual em qualquer hospedagem, já que o Firebase é chamado direto do navegador.
 
 ## Estrutura
 
 ```
 hosjiujitsu/
-├── index.html      → estrutura e conteúdo do site
+├── index.html      → estrutura e conteúdo do site institucional
 ├── style.css        → estilos (cores, tipografia, layout)
 ├── script.js        → menu mobile e ano do rodapé
 ├── assets/
-│   └── logo.png      → logo do projeto (fundo transparente)
+│   ├── logo.png            → logo do projeto (fundo transparente)
+│   └── instagram/          → fotos reais do @hosjiujitsu usadas no site
+├── app/
+│   ├── firebase-init.js    → config do Firebase (projeto: hosjiujitsu-app)
+│   ├── cadastro.html       → cadastro do aluno
+│   ├── login.html          → login (e-mail/senha)
+│   ├── perfil.html         → área do aluno logado (dados do próprio cadastro)
+│   └── app.css             → estilos do app
+├── firestore.rules          → regras de segurança da coleção "alunos"
 └── README.md
 ```
+
+**Antes de usar a Área do Aluno**, é preciso habilitar o login por e-mail/senha
+no Console do Firebase (Authentication > Sign-in method) — não existe comando
+de CLI pra isso, é um passo manual único.
 
 ## Como publicar no GitHub
 

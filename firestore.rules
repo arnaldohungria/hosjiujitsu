@@ -1,0 +1,35 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Valida tipo/tamanho dos campos de cadastro do aluno e restringe a faixa
+    // às opções reais do formulário. Telefones são opcionais no formulário,
+    // mas o campo sempre existe no documento (string vazia se não preenchido).
+    function dadosAlunoValidos(dados) {
+      return dados.nomeCompleto is string && dados.nomeCompleto.size() > 0 && dados.nomeCompleto.size() < 100
+        && dados.nomeResponsavel is string && dados.nomeResponsavel.size() > 0 && dados.nomeResponsavel.size() < 100
+        && dados.documento is string && dados.documento.size() > 0 && dados.documento.size() < 20
+        && dados.telefoneAluno is string && dados.telefoneAluno.size() < 30
+        && dados.telefoneResponsavel is string && dados.telefoneResponsavel.size() < 30
+        && dados.email is string && dados.email.size() < 100
+        && dados.faixa in ['Branca', 'Cinza', 'Amarela', 'Laranja', 'Verde', 'Azul', 'Roxa', 'Marrom', 'Preta'];
+    }
+
+    match /alunos/{alunoId} {
+      allow create: if isSignedIn() && request.auth.uid == alunoId
+        && dadosAlunoValidos(request.resource.data);
+
+      allow read: if isSignedIn() && request.auth.uid == alunoId;
+
+      allow update: if isSignedIn() && request.auth.uid == alunoId
+        && dadosAlunoValidos(request.resource.data);
+
+      allow delete: if false;
+    }
+  }
+}

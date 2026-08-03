@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cadastro de Aluno - HOS Jiu-Jitsu</title>
+<link rel="icon" type="image/png" href="../assets/logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+
+<header class="app-header">
+  <div class="logo-wrap">
+    <img src="../assets/logo.png" alt="Logo">
+    <h1>Área do Aluno</h1>
+  </div>
+</header>
+
+<main class="app-main">
+  <div class="card">
+    <h2>Criar Cadastro</h2>
+    <form id="form-cadastro">
+      <label for="nomeCompleto">Nome completo do aluno</label>
+      <input type="text" id="nomeCompleto" required>
+
+      <label for="nomeResponsavel">Nome do responsável (pai, mãe ou responsável)</label>
+      <input type="text" id="nomeResponsavel" required>
+
+      <label for="documento">RG ou CPF</label>
+      <input type="text" id="documento" required>
+
+      <label for="telefoneAluno">Telefone do aluno</label>
+      <input type="tel" id="telefoneAluno" placeholder="(15) 99999-9999">
+      <p class="field-hint">Opcional</p>
+
+      <label for="telefoneResponsavel">Telefone do responsável</label>
+      <input type="tel" id="telefoneResponsavel" placeholder="(15) 99999-9999">
+      <p class="field-hint">Opcional</p>
+
+      <label for="faixa">Graduação atual (faixa)</label>
+      <select id="faixa" required>
+        <option value="">Selecione...</option>
+        <option value="Branca">Branca</option>
+        <option value="Cinza">Cinza (infantil)</option>
+        <option value="Amarela">Amarela (infantil)</option>
+        <option value="Laranja">Laranja (infantil)</option>
+        <option value="Verde">Verde (infantil)</option>
+        <option value="Azul">Azul</option>
+        <option value="Roxa">Roxa</option>
+        <option value="Marrom">Marrom</option>
+        <option value="Preta">Preta</option>
+      </select>
+
+      <label for="email">E-mail</label>
+      <input type="email" id="email" required>
+
+      <label for="senha">Senha</label>
+      <input type="password" id="senha" minlength="6" required>
+
+      <label for="senha2">Confirmar senha</label>
+      <input type="password" id="senha2" minlength="6" required>
+
+      <button type="submit" class="btn" id="btn-cadastrar">Criar cadastro</button>
+      <div class="msg" id="msg"></div>
+    </form>
+
+    <p class="switch-link">Já tem cadastro? <a href="login.html">Fazer login</a></p>
+  </div>
+</main>
+
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script src="firebase-init.js"></script>
+<script>
+const form = document.getElementById("form-cadastro");
+const msg = document.getElementById("msg");
+const btn = document.getElementById("btn-cadastrar");
+
+function showMsg(text, type) {
+  msg.textContent = text;
+  msg.className = "msg show " + type;
+}
+
+form.addEventListener("submit", async (e) => {
+  e.preventDefault();
+
+  const nomeCompleto = document.getElementById("nomeCompleto").value.trim();
+  const nomeResponsavel = document.getElementById("nomeResponsavel").value.trim();
+  const documento = document.getElementById("documento").value.trim();
+  const telefoneAluno = document.getElementById("telefoneAluno").value.trim();
+  const telefoneResponsavel = document.getElementById("telefoneResponsavel").value.trim();
+  const faixa = document.getElementById("faixa").value;
+  const email = document.getElementById("email").value.trim();
+  const senha = document.getElementById("senha").value;
+  const senha2 = document.getElementById("senha2").value;
+
+  if (senha !== senha2) {
+    showMsg("As senhas não coincidem.", "error");
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = "Criando...";
+
+  try {
+    const cred = await auth.createUserWithEmailAndPassword(email, senha);
+    await db.collection("alunos").doc(cred.user.uid).set({
+      nomeCompleto,
+      nomeResponsavel,
+      documento,
+      telefoneAluno,
+      telefoneResponsavel,
+      faixa,
+      email,
+      criadoEm: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    window.location.href = "perfil.html";
+  } catch (err) {
+    let text = "Erro ao criar cadastro. Tente novamente.";
+    if (err.code === "auth/email-already-in-use") text = "Este e-mail já está cadastrado.";
+    if (err.code === "auth/weak-password") text = "A senha precisa ter pelo menos 6 caracteres.";
+    if (err.code === "auth/invalid-email") text = "E-mail inválido.";
+    showMsg(text, "error");
+    btn.disabled = false;
+    btn.textContent = "Criar cadastro";
+  }
+});
+</script>
+</body>
+</html>
