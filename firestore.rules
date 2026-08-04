@@ -105,5 +105,21 @@ service cloud.firestore {
       allow create: if pedidoRifaValido(request.resource.data);
       allow update, delete: if false;
     }
+
+    // ===== Doação livre (fora da rifa, sem cadastro/login) =====
+    function doacaoValida(dados) {
+      return dados.valor is number && dados.valor >= 1 && dados.valor <= 50000
+        && dados.nomeDoador is string && dados.nomeDoador.size() < 100
+        && dados.status == 'pendente'
+        && dados.criadoEm == request.time
+        && dados.keys().hasOnly(['valor', 'nomeDoador', 'status', 'criadoEm']);
+    }
+
+    match /doacoes/{doacaoId} {
+      allow get: if true;
+      allow list: if isAdmin();
+      allow create: if doacaoValida(request.resource.data);
+      allow update, delete: if false;
+    }
   }
 }

@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Doações - Painel do Professor - HOS Jiu-Jitsu</title>
+<link rel="icon" type="image/png" href="../assets/logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+
+<header class="app-header">
+  <div class="logo-wrap">
+    <img src="../assets/logo.png" alt="Logo">
+    <h1>Doações &mdash; Painel do Professor</h1>
+  </div>
+  <span class="sair" id="btn-sair">Sair</span>
+</header>
+
+<main class="app-main wide">
+  <div class="card" id="card-negado" style="display:none;">
+    <h2>Acesso restrito</h2>
+    <p>Esta área é exclusiva para o professor.</p>
+  </div>
+
+  <div id="conteudo" style="display:none;">
+    <div class="card-header-row" style="margin-top:0;">
+      <a href="admin.html" class="btn-secundario">&larr; Alunos</a>
+      <a href="admin-rifa.html" class="btn-secundario">Rifa</a>
+    </div>
+
+    <div class="card">
+      <h2>Doações recebidas</h2>
+      <div style="overflow-x:auto;">
+        <table class="admin-table" id="tabela-doacoes">
+          <thead>
+            <tr><th>Doador</th><th>Valor</th><th>Status</th><th>Criado em</th></tr>
+          </thead>
+          <tbody>
+            <tr><td colspan="4">Carregando...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script src="firebase-init.js"></script>
+<script>
+const btnSair = document.getElementById("btn-sair");
+const cardNegado = document.getElementById("card-negado");
+const conteudo = document.getElementById("conteudo");
+const tabelaDoacoes = document.querySelector("#tabela-doacoes tbody");
+
+btnSair.addEventListener("click", () => auth.signOut().then(() => window.location.href = "login.html"));
+
+auth.onAuthStateChanged(async (user) => {
+  if (!user) {
+    window.location.href = "login.html";
+    return;
+  }
+
+  const adminDoc = await db.collection("admins").doc(user.uid).get();
+  if (!adminDoc.exists) {
+    cardNegado.style.display = "block";
+    return;
+  }
+
+  conteudo.style.display = "block";
+  iniciarDoacoes();
+});
+
+function formatarValor(v) {
+  return "R$ " + (v || 0).toFixed(2).replace(".", ",");
+}
+
+function formatarDataHora(iso) {
+  if (!iso) return "-";
+  return new Date(iso).toLocaleString("pt-BR");
+}
+
+const STATUS_LABEL = { pendente: "Pendente", pago: "Pago" };
+
+function iniciarDoacoes() {
+  db.collection("doacoes").orderBy("criadoEm", "desc").onSnapshot((snap) => {
+    if (snap.empty) {
+      tabelaDoacoes.innerHTML = "<tr><td colspan='4'>Nenhuma doação ainda.</td></tr>";
+      return;
+    }
+
+    tabelaDoacoes.innerHTML = "";
+
+    // Nome do doador vem de um formulário público sem cadastro (conteúdo livre)
+    // — nunca usar innerHTML com esse dado, sempre createElement/textContent.
+    snap.forEach((doc) => {
+      const doacao = doc.data();
+      const tr = document.createElement("tr");
+
+      const tdNome = document.createElement("td");
+      tdNome.textContent = doacao.nomeDoador || "Anônimo";
+
+      const tdValor = document.createElement("td");
+      tdValor.textContent = formatarValor(doacao.valor);
+
+      const tdStatus = document.createElement("td");
+      const statusTag = document.createElement("span");
+      statusTag.className = "pedido-tag " + doacao.status;
+      statusTag.textContent = STATUS_LABEL[doacao.status] || doacao.status;
+      tdStatus.appendChild(statusTag);
+
+      const tdCriado = document.createElement("td");
+      tdCriado.textContent = doacao.criadoEm ? formatarDataHora(doacao.criadoEm.toDate()) : "-";
+
+      tr.append(tdNome, tdValor, tdStatus, tdCriado);
+      tabelaDoacoes.appendChild(tr);
+    });
+  });
+}
+</script>
+</body>
+</html>

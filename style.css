@@ -294,6 +294,14 @@ h1,h2,h3{
 }
 .rifa-resumo-info{display:flex; justify-content:space-between; font-family:var(--mono); font-size:.9rem;}
 
+.doacao-valores{display:flex; gap:.6rem; flex-wrap:wrap;}
+.doacao-valor-btn{
+  flex:1; min-width:80px; padding:.8rem; border:1px solid var(--line); border-radius:8px;
+  background:#fff; font-family:var(--mono); font-weight:700; cursor:pointer; transition:all .15s ease;
+}
+.doacao-valor-btn:hover{border-color:var(--purple);}
+.doacao-valor-btn.ativo{background:var(--purple); color:#fff; border-color:var(--purple);}
+
 .rifa-form{max-width:420px; margin:0 auto;}
 .rifa-form label{display:block; font-size:.85rem; font-weight:700; margin-bottom:6px; margin-top:16px; color:var(--text-dim);}
 .rifa-form label:first-of-type{margin-top:0;}

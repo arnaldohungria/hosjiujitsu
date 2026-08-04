@@ -1,5 +1,5 @@
 import { patchDocument, getDocument, batchGetDocuments, commitWrites, writeUpdate, writeDelete } from "./firestore.js";
-import { criarPagamentoPixRifa, consultarPagamento } from "./mercadopago.js";
+import { criarPagamentoPix, consultarPagamento } from "./mercadopago.js";
 
 const TOTAL_NUMEROS = 200;
 const EXPIRACAO_MS = 30 * 60 * 1000; // 30 minutos sem pagar libera o número de novo
@@ -43,9 +43,37 @@ async function handleCriarPix(request, env) {
   if (!pedido) return json({ erro: "Pedido não encontrado." }, 404);
   if (pedido.status !== "pendente") return json({ erro: "Pedido já não está mais pendente." }, 409);
 
-  const pagamento = await criarPagamentoPixRifa(env, { pedidoId, valor, descricao });
+  const pagamento = await criarPagamentoPix(env, { referenciaId: pedidoId, valor, descricao });
 
   await patchDocument(env, "rifaPedidos/" + pedidoId, {
+    pixCopiaECola: pagamento.pixCopiaECola,
+    pixQrCodeBase64: pagamento.pixQrCodeBase64,
+    mpPaymentId: pagamento.id
+  });
+
+  return json({ ok: true, pixCopiaECola: pagamento.pixCopiaECola, pixQrCodeBase64: pagamento.pixQrCodeBase64 });
+}
+
+async function handleCriarPixDoacao(request, env) {
+  const faltando = credenciaisFaltando(env);
+  if (faltando) {
+    return json({ erro: "Worker ainda não configurado. Faltam os segredos: " + faltando.join(", ") }, 501);
+  }
+
+  const body = await request.json();
+  const { doacaoId, valor, descricao } = body;
+
+  if (!doacaoId || !valor || valor <= 0 || !descricao) {
+    return json({ erro: "Campos obrigatórios: doacaoId, valor, descricao." }, 400);
+  }
+
+  const doacao = await getDocument(env, "doacoes/" + doacaoId);
+  if (!doacao) return json({ erro: "Doação não encontrada." }, 404);
+  if (doacao.status !== "pendente") return json({ erro: "Doação já não está mais pendente." }, 409);
+
+  const pagamento = await criarPagamentoPix(env, { referenciaId: doacaoId, valor, descricao });
+
+  await patchDocument(env, "doacoes/" + doacaoId, {
     pixCopiaECola: pagamento.pixCopiaECola,
     pixQrCodeBase64: pagamento.pixQrCodeBase64,
     mpPaymentId: pagamento.id
@@ -79,17 +107,27 @@ async function handleWebhookMercadoPago(request, env) {
   }
   if (pagamento.status !== "approved") return json({ ok: true });
 
-  const pedidoId = pagamento.external_reference;
-  if (!pedidoId) return json({ ok: true });
+  const referenciaId = pagamento.external_reference;
+  if (!referenciaId) return json({ ok: true });
 
-  const pedido = await getDocument(env, "rifaPedidos/" + pedidoId);
-  if (!pedido || pedido.status === "pago") return json({ ok: true }); // já processado ou não existe (idempotência)
+  // O external_reference tanto pode ser um pedido de rifa quanto uma doação
+  // livre — cada pagamento do Mercado Pago só tem uma origem, então tenta
+  // achar em uma coleção e, se não achar, tenta na outra.
+  const pedido = await getDocument(env, "rifaPedidos/" + referenciaId);
+  if (pedido) {
+    if (pedido.status === "pago") return json({ ok: true }); // já processado (idempotência)
+    const writes = [
+      writeUpdate(env, "rifaPedidos/" + referenciaId, { status: "pago", pagoEm: new Date() }),
+      ...(pedido.numeros || []).map((n) => writeUpdate(env, "rifaNumeros/" + formatarNumero(n), { status: "pago" }))
+    ];
+    await commitWrites(env, writes);
+    return json({ ok: true });
+  }
 
-  const writes = [
-    writeUpdate(env, "rifaPedidos/" + pedidoId, { status: "pago", pagoEm: new Date() }),
-    ...(pedido.numeros || []).map((n) => writeUpdate(env, "rifaNumeros/" + formatarNumero(n), { status: "pago" }))
-  ];
-  await commitWrites(env, writes);
+  const doacao = await getDocument(env, "doacoes/" + referenciaId);
+  if (doacao && doacao.status !== "pago") {
+    await patchDocument(env, "doacoes/" + referenciaId, { status: "pago", pagoEm: new Date() });
+  }
 
   return json({ ok: true });
 }
@@ -137,6 +175,9 @@ export default {
     try {
       if (pathname === "/criar-pix" && request.method === "POST") {
         return await handleCriarPix(request, env);
+      }
+      if (pathname === "/criar-pix-doacao" && request.method === "POST") {
+        return await handleCriarPixDoacao(request, env);
       }
       if (pathname === "/webhook-mercadopago" && request.method === "POST") {
         return await handleWebhookMercadoPago(request, env);

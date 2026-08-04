@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Doar — HOS Jiu-Jitsu</title>
+<meta name="description" content="Faça uma doação de qualquer valor para o HOS Jiu-Jitsu, projeto social de jiu-jitsu gratuito para crianças e jovens do Distrito de Rechan, Itapetininga-SP.">
+
+<link rel="icon" type="image/png" href="assets/logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="nav" id="nav">
+  <div class="nav-inner">
+    <a href="index.html" class="nav-brand">
+      <img src="assets/logo.png" alt="HOS Jiu-Jitsu" class="nav-logo">
+      <span class="nav-word">HOS<b>JIU-JITSU</b></span>
+    </a>
+    <nav class="nav-links" id="navLinks">
+      <a href="index.html">Início</a>
+      <a href="rifa.html">Rifa Solidária</a>
+      <a href="index.html#contato">Contato</a>
+      <a href="https://instagram.com/hosjiujitsu" target="_blank" rel="noopener" class="nav-cta">@hosjiujitsu</a>
+      <a href="app/login.html" class="nav-aluno">Área do Aluno</a>
+    </nav>
+    <button class="nav-toggle" id="navToggle" aria-label="Abrir menu">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</header>
+
+<main>
+
+  <section class="section rifa-hero">
+    <div class="section-inner">
+      <div class="section-head center">
+        <p class="eyebrow">Apoie o projeto</p>
+        <h1 class="rifa-title">FAÇA UMA<br><span>DOAÇÃO LIVRE</span></h1>
+        <p class="rifa-sub">Qualquer valor ajuda a manter as aulas gratuitas de Jiu-Jitsu e a comprar material (kimonos, faixas) pras crianças e jovens do projeto. Escolha um valor ou digite o quanto quiser doar.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section section-alt">
+    <div class="section-inner">
+      <form id="form-doacao" class="rifa-form">
+        <label>Valor da doação</label>
+        <div class="doacao-valores" id="valoresRapidos">
+          <button type="button" class="doacao-valor-btn" data-valor="10">R$ 10</button>
+          <button type="button" class="doacao-valor-btn" data-valor="20">R$ 20</button>
+          <button type="button" class="doacao-valor-btn" data-valor="50">R$ 50</button>
+          <button type="button" class="doacao-valor-btn" data-valor="100">R$ 100</button>
+        </div>
+        <input type="number" id="valor" min="1" step="0.01" placeholder="Ou digite outro valor (R$)" required>
+
+        <label for="nomeDoador">Seu nome (opcional)</label>
+        <input type="text" id="nomeDoador" placeholder="Deixe em branco pra doar anonimamente">
+
+        <button type="submit" class="btn btn-primary rifa-btn-gerar" id="btn-gerar-pix">Gerar Pix da doação</button>
+        <div class="msg" id="msg"></div>
+      </form>
+
+      <div class="rifa-pagamento" id="rifaPagamento" style="display:none;">
+        <h3>Pagamento</h3>
+        <div id="pagamentoConteudo"></div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <img src="assets/logo.png" alt="HOS Jiu-Jitsu" class="footer-logo">
+    <div class="footer-text">
+      <p class="footer-title">HOS Jiu-Jitsu</p>
+      <p>Hungria Old School Jiu-Jitsu &middot; Distrito de Rechan, Itapetininga-SP</p>
+      <a href="https://instagram.com/hosjiujitsu" target="_blank" rel="noopener">@hosjiujitsu</a>
+    </div>
+  </div>
+  <p class="footer-copy">&copy; <span id="year"></span> HOS Jiu-Jitsu &mdash; Projeto social sem fins lucrativos.</p>
+</footer>
+
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script src="app/firebase-init.js"></script>
+<script src="script.js"></script>
+<script>
+const WORKER_URL = "https://hosjiujitsu-rifa.academiaplus.workers.dev";
+
+const formDoacao = document.getElementById("form-doacao");
+const inputValor = document.getElementById("valor");
+const valoresRapidos = document.getElementById("valoresRapidos");
+const btnGerarPix = document.getElementById("btn-gerar-pix");
+const msg = document.getElementById("msg");
+const rifaPagamento = document.getElementById("rifaPagamento");
+const pagamentoConteudo = document.getElementById("pagamentoConteudo");
+
+function showMsg(text, type) {
+  msg.textContent = text;
+  msg.className = "msg show " + type;
+}
+
+valoresRapidos.querySelectorAll(".doacao-valor-btn").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    inputValor.value = btn.dataset.valor;
+    valoresRapidos.querySelectorAll(".doacao-valor-btn").forEach((b) => b.classList.remove("ativo"));
+    btn.classList.add("ativo");
+  });
+});
+
+inputValor.addEventListener("input", () => {
+  valoresRapidos.querySelectorAll(".doacao-valor-btn").forEach((b) => b.classList.remove("ativo"));
+});
+
+formDoacao.addEventListener("submit", async (e) => {
+  e.preventDefault();
+
+  const valor = parseFloat(inputValor.value);
+  const nomeDoador = document.getElementById("nomeDoador").value.trim();
+
+  if (!valor || valor <= 0) {
+    showMsg("Escolha ou digite um valor válido.", "error");
+    return;
+  }
+
+  btnGerarPix.disabled = true;
+  btnGerarPix.textContent = "Gerando...";
+
+  const doacaoRef = db.collection("doacoes").doc();
+
+  try {
+    await doacaoRef.set({
+      valor,
+      nomeDoador,
+      status: "pendente",
+      criadoEm: firebase.firestore.FieldValue.serverTimestamp()
+    });
+  } catch (err) {
+    showMsg("Não foi possível registrar a doação. Tente novamente.", "error");
+    btnGerarPix.disabled = false;
+    btnGerarPix.textContent = "Gerar Pix da doação";
+    return;
+  }
+
+  formDoacao.querySelectorAll("input, button").forEach((el) => (el.disabled = true));
+  showMsg("Gerando o Pix...", "info");
+
+  await gerarEAcompanharPixDoacao(doacaoRef, valor);
+});
+
+async function gerarEAcompanharPixDoacao(doacaoRef, valor) {
+  rifaPagamento.style.display = "block";
+  pagamentoConteudo.innerHTML = "";
+
+  let resposta;
+  try {
+    const r = await fetch(WORKER_URL + "/criar-pix-doacao", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        doacaoId: doacaoRef.id,
+        valor,
+        descricao: "Doação HOS Jiu-Jitsu"
+      })
+    });
+    resposta = await r.json();
+
+    if (r.status === 501) {
+      const p = document.createElement("p");
+      p.textContent = "O pagamento automático via Pix ainda está sendo configurado. Fale com a gente pelo WhatsApp pra combinar sua doação:";
+      const link = document.createElement("a");
+      link.href = "https://wa.me/5515997076947";
+      link.target = "_blank";
+      link.rel = "noopener";
+      link.className = "btn btn-primary";
+      link.style.marginTop = "1rem";
+      link.textContent = "Falar no WhatsApp";
+      pagamentoConteudo.append(p, link);
+      msg.className = "msg";
+      return;
+    }
+
+    if (!r.ok || !resposta.ok) throw new Error(resposta.erro || "Falha ao gerar Pix.");
+  } catch (err) {
+    const p = document.createElement("p");
+    p.textContent = "Não foi possível gerar o Pix agora. Tente novamente ou fale no WhatsApp (15) 99707-6947.";
+    pagamentoConteudo.appendChild(p);
+    return;
+  }
+
+  const img = document.createElement("img");
+  img.src = "data:image/png;base64," + resposta.pixQrCodeBase64;
+  img.alt = "QR Code Pix";
+  img.className = "rifa-qr";
+
+  const label = document.createElement("p");
+  label.textContent = "Escaneie o QR Code ou copie o código Pix abaixo:";
+
+  const codigoBox = document.createElement("div");
+  codigoBox.className = "rifa-pix-codigo";
+  const codigoTexto = document.createElement("code");
+  codigoTexto.textContent = resposta.pixCopiaECola;
+  const btnCopiar = document.createElement("button");
+  btnCopiar.type = "button";
+  btnCopiar.className = "btn btn-ghost";
+  btnCopiar.textContent = "Copiar código";
+  btnCopiar.addEventListener("click", () => {
+    navigator.clipboard.writeText(resposta.pixCopiaECola);
+    btnCopiar.textContent = "Copiado!";
+    setTimeout(() => (btnCopiar.textContent = "Copiar código"), 2000);
+  });
+  codigoBox.append(codigoTexto, btnCopiar);
+
+  pagamentoConteudo.append(img, label, codigoBox);
+
+  doacaoRef.onSnapshot((doc) => {
+    if (doc.exists && doc.data().status === "pago") {
+      pagamentoConteudo.innerHTML = "";
+      const ok = document.createElement("p");
+      ok.className = "rifa-pago-ok";
+      ok.textContent = "Doação confirmada! Muito obrigado pelo apoio ao projeto. 🥋";
+      pagamentoConteudo.appendChild(ok);
+    }
+  });
+}
+</script>
+</body>
+</html>
