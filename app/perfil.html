@@ -108,10 +108,10 @@ auth.onAuthStateChanged(async (user) => {
   linha(perfilAluno, "E-mail", aluno.email);
 
   perfilResponsavel.innerHTML = "";
-  linha(perfilResponsavel, "Nome completo", aluno.nomeResponsavel);
-  linha(perfilResponsavel, "RG ou CPF", aluno.documentoResponsavel);
+  linha(perfilResponsavel, "Nome completo", aluno.nomeResponsavel || "-");
+  linha(perfilResponsavel, "RG ou CPF", aluno.documentoResponsavel || "-");
   linha(perfilResponsavel, "Endereço", aluno.enderecoResponsavel);
-  linha(perfilResponsavel, "Telefone", aluno.telefoneResponsavel);
+  linha(perfilResponsavel, "Telefone", aluno.telefoneResponsavel || "-");
 });
 </script>
 </body>

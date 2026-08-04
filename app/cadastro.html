@@ -54,6 +54,7 @@
       </select>
 
       <p class="form-section-title">Dados do pai, mãe ou responsável</p>
+      <p class="field-hint">Caso seja maior de 18 anos, não precisa preencher nome, documento e telefone dos pais ou responsável — apenas o endereço continua obrigatório.</p>
 
       <label for="nomeResponsavel">Nome completo</label>
       <input type="text" id="nomeResponsavel" required>
@@ -95,10 +96,35 @@ const form = document.getElementById("form-cadastro");
 const msg = document.getElementById("msg");
 const btn = document.getElementById("btn-cadastrar");
 
+const inputNascimento = document.getElementById("dataNascimento");
+const inputNomeResponsavel = document.getElementById("nomeResponsavel");
+const inputDocumentoResponsavel = document.getElementById("documentoResponsavel");
+const inputTelefoneResponsavel = document.getElementById("telefoneResponsavel");
+
 function showMsg(text, type) {
   msg.textContent = text;
   msg.className = "msg show " + type;
 }
+
+function calcularIdade(dataISO) {
+  const hoje = new Date();
+  const nascimento = new Date(dataISO + "T00:00:00");
+  let idade = hoje.getFullYear() - nascimento.getFullYear();
+  const aindaNaoFezAniversario = (hoje.getMonth() < nascimento.getMonth())
+    || (hoje.getMonth() === nascimento.getMonth() && hoje.getDate() < nascimento.getDate());
+  if (aindaNaoFezAniversario) idade--;
+  return idade;
+}
+
+function atualizarObrigatoriedadeResponsavel() {
+  if (!inputNascimento.value) return;
+  const maiorDeIdade = calcularIdade(inputNascimento.value) >= 18;
+  inputNomeResponsavel.required = !maiorDeIdade;
+  inputDocumentoResponsavel.required = !maiorDeIdade;
+  inputTelefoneResponsavel.required = !maiorDeIdade;
+}
+
+inputNascimento.addEventListener("change", atualizarObrigatoriedadeResponsavel);
 
 form.addEventListener("submit", async (e) => {
   e.preventDefault();

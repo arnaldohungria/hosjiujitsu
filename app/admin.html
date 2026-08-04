@@ -133,7 +133,7 @@ async function carregarAlunos() {
     tdTelefoneAluno.textContent = aluno.telefoneAluno || "-";
 
     const tdResponsavel = document.createElement("td");
-    tdResponsavel.textContent = aluno.nomeResponsavel;
+    tdResponsavel.textContent = aluno.nomeResponsavel || "-";
 
     tr.append(tdNome, tdFaixa, tdNascimento, tdTelefoneAluno, tdResponsavel);
     tr.addEventListener("click", () => abrirDetalhes(aluno));
@@ -164,10 +164,10 @@ function abrirDetalhes(aluno) {
   linha(modalCorpo, "Telefone", aluno.telefoneAluno || "-");
   linha(modalCorpo, "Faixa", aluno.faixa);
   linha(modalCorpo, "E-mail", aluno.email);
-  linha(modalCorpo, "Responsável", aluno.nomeResponsavel);
-  linha(modalCorpo, "RG ou CPF do responsável", aluno.documentoResponsavel);
+  linha(modalCorpo, "Responsável", aluno.nomeResponsavel || "-");
+  linha(modalCorpo, "RG ou CPF do responsável", aluno.documentoResponsavel || "-");
   linha(modalCorpo, "Endereço", aluno.enderecoResponsavel);
-  linha(modalCorpo, "Telefone do responsável", aluno.telefoneResponsavel);
+  linha(modalCorpo, "Telefone do responsável", aluno.telefoneResponsavel || "-");
 
   modalBackdrop.classList.add("show");
 }
@@ -207,8 +207,8 @@ function gerarRelatorio() {
         aluno.faixa,
         formatarData(aluno.dataNascimento),
         aluno.telefoneAluno || "-",
-        aluno.nomeResponsavel,
-        aluno.telefoneResponsavel
+        aluno.nomeResponsavel || "-",
+        aluno.telefoneResponsavel || "-"
       ].forEach((texto) => {
         const td = document.createElement("td");
         td.textContent = texto;

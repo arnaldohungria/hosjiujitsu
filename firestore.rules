@@ -11,21 +11,35 @@ service cloud.firestore {
       return isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
     }
 
+    // Menor de idade = ainda não completou 18 anos na data de hoje (request.time).
+    // dataNascimento vem sempre no formato "AAAA-MM-DD" (input type=date do formulário).
+    function alunoMenorDeIdade(dataNascimento) {
+      let partes = dataNascimento.split('-');
+      let dataAniversario18 = timestamp.date(int(partes[0]) + 18, int(partes[1]), int(partes[2]));
+      return request.time < dataAniversario18;
+    }
+
     // Valida tipo/tamanho dos campos de cadastro (formulário "DADOS DO ALUNO").
     // documentoAluno e telefoneAluno são opcionais no formulário — o campo sempre
-    // existe no documento (string vazia se não preenchido). Os dados do
-    // responsável (documento, endereço, telefone) são obrigatórios.
+    // existe no documento (string vazia se não preenchido). Os dados do responsável
+    // (nome, documento, telefone) só são obrigatórios se o aluno for menor de idade;
+    // o endereço do responsável continua obrigatório em qualquer caso.
     function dadosAlunoValidos(dados) {
       return dados.nomeCompleto is string && dados.nomeCompleto.size() > 0 && dados.nomeCompleto.size() < 100
         && dados.dataNascimento is string && dados.dataNascimento.size() > 0
         && dados.documentoAluno is string && dados.documentoAluno.size() < 20
         && dados.telefoneAluno is string && dados.telefoneAluno.size() < 30
         && dados.faixa in ['Branca', 'Cinza', 'Amarela', 'Laranja', 'Verde', 'Azul', 'Roxa', 'Marrom', 'Preta']
-        && dados.nomeResponsavel is string && dados.nomeResponsavel.size() > 0 && dados.nomeResponsavel.size() < 100
-        && dados.documentoResponsavel is string && dados.documentoResponsavel.size() > 0 && dados.documentoResponsavel.size() < 20
+        && dados.nomeResponsavel is string && dados.nomeResponsavel.size() < 100
+        && dados.documentoResponsavel is string && dados.documentoResponsavel.size() < 20
         && dados.enderecoResponsavel is string && dados.enderecoResponsavel.size() > 0 && dados.enderecoResponsavel.size() < 150
-        && dados.telefoneResponsavel is string && dados.telefoneResponsavel.size() > 0 && dados.telefoneResponsavel.size() < 30
-        && dados.email is string && dados.email.size() < 100;
+        && dados.telefoneResponsavel is string && dados.telefoneResponsavel.size() < 30
+        && dados.email is string && dados.email.size() < 100
+        && (!alunoMenorDeIdade(dados.dataNascimento) || (
+          dados.nomeResponsavel.size() > 0
+          && dados.documentoResponsavel.size() > 0
+          && dados.telefoneResponsavel.size() > 0
+        ));
     }
 
     match /alunos/{alunoId} {
