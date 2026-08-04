@@ -69,7 +69,14 @@ async function handleWebhookMercadoPago(request, env) {
   if (!paymentId) return json({ ok: true }); // notificação que não é de pagamento; só confirma recebimento
 
   // Nunca confia no conteúdo da notificação em si — sempre confirma o status direto na API do Mercado Pago.
-  const pagamento = await consultarPagamento(env, paymentId);
+  // Notificações de teste do próprio painel do Mercado Pago costumam usar um ID que não existe de
+  // verdade — trata como "nada a fazer" em vez de devolver erro (evita retentativa em loop).
+  let pagamento;
+  try {
+    pagamento = await consultarPagamento(env, paymentId);
+  } catch (err) {
+    return json({ ok: true });
+  }
   if (pagamento.status !== "approved") return json({ ok: true });
 
   const pedidoId = pagamento.external_reference;

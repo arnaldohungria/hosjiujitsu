@@ -14,7 +14,7 @@ async function criarPagamentoPixRifa(env, { pedidoId, valor, descricao }) {
       description: descricao,
       payment_method_id: "pix",
       external_reference: pedidoId,
-      payer: { email: pedidoId + "@hosjiujitsu.invalid" } // MP exige e-mail do pagador; não coletamos e-mail do comprador da rifa
+      payer: { email: "rifa+" + pedidoId + "@hosjiujitsu.vercel.app" } // MP exige e-mail do pagador; não coletamos e-mail do comprador da rifa. ".invalid" (RFC 2606) é rejeitado pela validação deles, por isso usamos um domínio real que não recebe e-mail de verdade.
     })
   });
 
