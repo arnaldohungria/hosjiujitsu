@@ -7,6 +7,10 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function isAdmin() {
+      return isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
     // Valida tipo/tamanho dos campos de cadastro (formulário "DADOS DO ALUNO").
     // documentoAluno e telefoneAluno são opcionais no formulário — o campo sempre
     // existe no documento (string vazia se não preenchido). Os dados do
@@ -28,12 +32,17 @@ service cloud.firestore {
       allow create: if isSignedIn() && request.auth.uid == alunoId
         && dadosAlunoValidos(request.resource.data);
 
-      allow read: if isSignedIn() && request.auth.uid == alunoId;
+      allow read: if isSignedIn() && (request.auth.uid == alunoId || isAdmin());
 
       allow update: if isSignedIn() && request.auth.uid == alunoId
         && dadosAlunoValidos(request.resource.data);
 
       allow delete: if false;
+    }
+
+    match /admins/{adminId} {
+      allow read: if isSignedIn() && request.auth.uid == adminId;
+      allow write: if false; // só é possível adicionar pelo Console do Firebase
     }
   }
 }

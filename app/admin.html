@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Painel do Professor - HOS Jiu-Jitsu</title>
+<link rel="icon" type="image/png" href="../assets/logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+
+<header class="app-header">
+  <div class="logo-wrap">
+    <img src="../assets/logo.png" alt="Logo">
+    <h1>Painel do Professor</h1>
+  </div>
+  <span class="sair" id="btn-sair">Sair</span>
+</header>
+
+<main class="app-main wide">
+  <div class="card" id="card-negado" style="display:none;">
+    <h2>Acesso restrito</h2>
+    <p>Esta área é exclusiva para o professor. Se você deveria ter acesso, peça para liberar seu usuário na coleção <code>admins</code> do Firebase.</p>
+  </div>
+
+  <div id="conteudo" style="display:none;">
+    <div class="card">
+      <div class="card-header-row">
+        <h2>Alunos cadastrados</h2>
+        <button type="button" class="btn-secundario" id="btn-relatorio">Imprimir relatório</button>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="admin-table" id="tabela-alunos">
+          <thead>
+            <tr><th>Nome</th><th>Faixa</th><th>Nascimento</th><th>Telefone aluno</th><th>Responsável</th></tr>
+          </thead>
+          <tbody>
+            <tr><td colspan="5">Carregando...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</main>
+
+<div class="modal-backdrop" id="modal-backdrop">
+  <div class="modal">
+    <span class="close" id="modal-close">&times;</span>
+    <h2 id="modal-titulo">Aluno</h2>
+    <div id="modal-corpo"></div>
+  </div>
+</div>
+
+<div class="only-print" id="relatorio-impressao"></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script src="firebase-init.js"></script>
+<script>
+const btnSair = document.getElementById("btn-sair");
+const cardNegado = document.getElementById("card-negado");
+const conteudo = document.getElementById("conteudo");
+const tabelaAlunos = document.querySelector("#tabela-alunos tbody");
+const modalBackdrop = document.getElementById("modal-backdrop");
+const modalTitulo = document.getElementById("modal-titulo");
+const modalCorpo = document.getElementById("modal-corpo");
+const modalClose = document.getElementById("modal-close");
+const btnRelatorio = document.getElementById("btn-relatorio");
+const relatorioImpressao = document.getElementById("relatorio-impressao");
+
+let alunosCache = [];
+
+btnSair.addEventListener("click", () => auth.signOut().then(() => window.location.href = "login.html"));
+modalClose.addEventListener("click", () => modalBackdrop.classList.remove("show"));
+btnRelatorio.addEventListener("click", gerarRelatorio);
+
+auth.onAuthStateChanged(async (user) => {
+  if (!user) {
+    window.location.href = "login.html";
+    return;
+  }
+
+  const adminDoc = await db.collection("admins").doc(user.uid).get();
+  if (!adminDoc.exists) {
+    cardNegado.style.display = "block";
+    return;
+  }
+
+  conteudo.style.display = "block";
+  carregarAlunos();
+});
+
+function formatarData(iso) {
+  if (!iso) return "-";
+  const [ano, mes, dia] = iso.split("-");
+  return dia + "/" + mes + "/" + ano;
+}
+
+// Todos os dados de aluno/responsável vêm do cadastro do próprio aluno (conteúdo
+// livre) — nunca colocar em innerHTML. Cada célula/linha é montada via
+// createElement/textContent, que escapam qualquer HTML/script automaticamente.
+async function carregarAlunos() {
+  const snap = await db.collection("alunos").orderBy("nomeCompleto").get();
+
+  if (snap.empty) {
+    tabelaAlunos.innerHTML = "<tr><td colspan='5'>Nenhum aluno cadastrado.</td></tr>";
+    return;
+  }
+
+  alunosCache = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+  tabelaAlunos.innerHTML = "";
+
+  alunosCache.forEach((aluno) => {
+    const tr = document.createElement("tr");
+
+    const tdNome = document.createElement("td");
+    tdNome.textContent = aluno.nomeCompleto;
+
+    const tdFaixa = document.createElement("td");
+    const beltTag = document.createElement("span");
+    beltTag.className = "belt-tag";
+    beltTag.textContent = aluno.faixa;
+    tdFaixa.appendChild(beltTag);
+
+    const tdNascimento = document.createElement("td");
+    tdNascimento.textContent = formatarData(aluno.dataNascimento);
+
+    const tdTelefoneAluno = document.createElement("td");
+    tdTelefoneAluno.textContent = aluno.telefoneAluno || "-";
+
+    const tdResponsavel = document.createElement("td");
+    tdResponsavel.textContent = aluno.nomeResponsavel;
+
+    tr.append(tdNome, tdFaixa, tdNascimento, tdTelefoneAluno, tdResponsavel);
+    tr.addEventListener("click", () => abrirDetalhes(aluno));
+
+    tabelaAlunos.appendChild(tr);
+  });
+}
+
+function linha(container, label, valor) {
+  const row = document.createElement("div");
+  row.className = "profile-row";
+  const spanLabel = document.createElement("span");
+  spanLabel.className = "label";
+  spanLabel.textContent = label;
+  const spanValue = document.createElement("span");
+  spanValue.className = "value";
+  spanValue.textContent = valor;
+  row.append(spanLabel, spanValue);
+  container.appendChild(row);
+}
+
+function abrirDetalhes(aluno) {
+  modalTitulo.textContent = aluno.nomeCompleto;
+  modalCorpo.innerHTML = "";
+
+  linha(modalCorpo, "Data de nascimento", formatarData(aluno.dataNascimento));
+  linha(modalCorpo, "RG ou CPF", aluno.documentoAluno || "-");
+  linha(modalCorpo, "Telefone", aluno.telefoneAluno || "-");
+  linha(modalCorpo, "Faixa", aluno.faixa);
+  linha(modalCorpo, "E-mail", aluno.email);
+  linha(modalCorpo, "Responsável", aluno.nomeResponsavel);
+  linha(modalCorpo, "RG ou CPF do responsável", aluno.documentoResponsavel);
+  linha(modalCorpo, "Endereço", aluno.enderecoResponsavel);
+  linha(modalCorpo, "Telefone do responsável", aluno.telefoneResponsavel);
+
+  modalBackdrop.classList.add("show");
+}
+
+function gerarRelatorio() {
+  relatorioImpressao.innerHTML = "";
+
+  const titulo = document.createElement("h1");
+  titulo.textContent = "Relatório de Alunos - HOS Jiu-Jitsu";
+  relatorioImpressao.appendChild(titulo);
+
+  if (alunosCache.length === 0) {
+    const p = document.createElement("p");
+    p.textContent = "Nenhum aluno cadastrado.";
+    relatorioImpressao.appendChild(p);
+  } else {
+    const p = document.createElement("p");
+    p.textContent = "Gerado em " + new Date().toLocaleDateString("pt-BR");
+    relatorioImpressao.appendChild(p);
+
+    const table = document.createElement("table");
+    const thead = document.createElement("thead");
+    const trHead = document.createElement("tr");
+    ["Aluno", "Faixa", "Nascimento", "Telefone", "Responsável", "Tel. responsável"].forEach((texto) => {
+      const th = document.createElement("th");
+      th.textContent = texto;
+      trHead.appendChild(th);
+    });
+    thead.appendChild(trHead);
+    table.appendChild(thead);
+
+    const tbody = document.createElement("tbody");
+    alunosCache.forEach((aluno) => {
+      const tr = document.createElement("tr");
+      [
+        aluno.nomeCompleto,
+        aluno.faixa,
+        formatarData(aluno.dataNascimento),
+        aluno.telefoneAluno || "-",
+        aluno.nomeResponsavel,
+        aluno.telefoneResponsavel
+      ].forEach((texto) => {
+        const td = document.createElement("td");
+        td.textContent = texto;
+        tr.appendChild(td);
+      });
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+    relatorioImpressao.appendChild(table);
+  }
+
+  window.print();
+}
+</script>
+</body>
+</html>
