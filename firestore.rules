@@ -48,10 +48,10 @@ service cloud.firestore {
 
       allow read: if isSignedIn() && (request.auth.uid == alunoId || isAdmin());
 
-      allow update: if isSignedIn() && request.auth.uid == alunoId
+      allow update: if isSignedIn() && (request.auth.uid == alunoId || isAdmin())
         && dadosAlunoValidos(request.resource.data);
 
-      allow delete: if false;
+      allow delete: if isAdmin();
     }
 
     match /admins/{adminId} {

@@ -174,7 +174,161 @@ function abrirDetalhes(aluno) {
   linha(modalCorpo, "Endereço", aluno.enderecoResponsavel);
   linha(modalCorpo, "Telefone do responsável", aluno.telefoneResponsavel || "-");
 
+  const acoes = document.createElement("div");
+  acoes.className = "modal-acoes";
+
+  const btnEditar = document.createElement("button");
+  btnEditar.type = "button";
+  btnEditar.className = "btn-secundario";
+  btnEditar.textContent = "Editar cadastro";
+  btnEditar.addEventListener("click", () => abrirEdicao(aluno));
+
+  const btnExcluir = document.createElement("button");
+  btnExcluir.type = "button";
+  btnExcluir.className = "btn-excluir";
+  btnExcluir.textContent = "Excluir cadastro";
+  btnExcluir.addEventListener("click", () => excluirAluno(aluno));
+
+  acoes.append(btnEditar, btnExcluir);
+  modalCorpo.appendChild(acoes);
+
   modalBackdrop.classList.add("show");
+}
+
+function campo(container, label, id, valor, opts) {
+  opts = opts || {};
+  const lbl = document.createElement("label");
+  lbl.setAttribute("for", id);
+  lbl.textContent = label;
+  const input = document.createElement("input");
+  input.type = opts.type || "text";
+  input.id = id;
+  input.value = valor || "";
+  if (opts.required) input.required = true;
+  container.append(lbl, input);
+  return input;
+}
+
+function calcularIdade(dataISO) {
+  const hoje = new Date();
+  const nascimento = new Date(dataISO + "T00:00:00");
+  let idade = hoje.getFullYear() - nascimento.getFullYear();
+  const aindaNaoFezAniversario = (hoje.getMonth() < nascimento.getMonth())
+    || (hoje.getMonth() === nascimento.getMonth() && hoje.getDate() < nascimento.getDate());
+  if (aindaNaoFezAniversario) idade--;
+  return idade;
+}
+
+function abrirEdicao(aluno) {
+  modalTitulo.textContent = "Editar - " + aluno.nomeCompleto;
+  modalCorpo.innerHTML = "";
+
+  const form = document.createElement("form");
+  form.id = "form-editar-aluno";
+
+  const tituloAluno = document.createElement("p");
+  tituloAluno.className = "form-section-title";
+  tituloAluno.textContent = "Dados do aluno";
+  form.appendChild(tituloAluno);
+
+  const inputNome = campo(form, "Nome completo", "edit-nomeCompleto", aluno.nomeCompleto, { required: true });
+  const inputNascimento = campo(form, "Data de nascimento", "edit-dataNascimento", aluno.dataNascimento, { type: "date", required: true });
+  const inputDocAluno = campo(form, "RG ou CPF", "edit-documentoAluno", aluno.documentoAluno);
+  const inputTelAluno = campo(form, "Telefone", "edit-telefoneAluno", aluno.telefoneAluno);
+
+  const lblFaixa = document.createElement("label");
+  lblFaixa.setAttribute("for", "edit-faixa");
+  lblFaixa.textContent = "Faixa";
+  const selectFaixa = document.createElement("select");
+  selectFaixa.id = "edit-faixa";
+  ["Branca", "Cinza", "Amarela", "Laranja", "Verde", "Azul", "Roxa", "Marrom", "Preta"].forEach((f) => {
+    const opt = document.createElement("option");
+    opt.value = f;
+    opt.textContent = f;
+    if (f === aluno.faixa) opt.selected = true;
+    selectFaixa.appendChild(opt);
+  });
+  form.append(lblFaixa, selectFaixa);
+
+  const tituloResp = document.createElement("p");
+  tituloResp.className = "form-section-title";
+  tituloResp.textContent = "Dados do pai, mãe ou responsável";
+  form.appendChild(tituloResp);
+
+  const inputNomeResp = campo(form, "Nome completo", "edit-nomeResponsavel", aluno.nomeResponsavel);
+  const inputDocResp = campo(form, "RG ou CPF", "edit-documentoResponsavel", aluno.documentoResponsavel);
+  const inputEndResp = campo(form, "Endereço (rua e número)", "edit-enderecoResponsavel", aluno.enderecoResponsavel, { required: true });
+  const inputTelResp = campo(form, "Telefone", "edit-telefoneResponsavel", aluno.telefoneResponsavel);
+
+  function atualizarObrigatoriedade() {
+    if (!inputNascimento.value) return;
+    const maiorDeIdade = calcularIdade(inputNascimento.value) >= 18;
+    inputNomeResp.required = !maiorDeIdade;
+    inputDocResp.required = !maiorDeIdade;
+    inputTelResp.required = !maiorDeIdade;
+  }
+  inputNascimento.addEventListener("change", atualizarObrigatoriedade);
+  atualizarObrigatoriedade();
+
+  const msgEdicao = document.createElement("div");
+  msgEdicao.className = "msg";
+  msgEdicao.id = "msg-edicao";
+
+  const acoes = document.createElement("div");
+  acoes.className = "modal-acoes";
+
+  const btnSalvar = document.createElement("button");
+  btnSalvar.type = "submit";
+  btnSalvar.className = "btn";
+  btnSalvar.textContent = "Salvar alterações";
+
+  const btnCancelar = document.createElement("button");
+  btnCancelar.type = "button";
+  btnCancelar.className = "btn-secundario";
+  btnCancelar.textContent = "Cancelar";
+  btnCancelar.addEventListener("click", () => abrirDetalhes(aluno));
+
+  acoes.append(btnSalvar, btnCancelar);
+  form.append(msgEdicao, acoes);
+  modalCorpo.appendChild(form);
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    btnSalvar.disabled = true;
+    btnSalvar.textContent = "Salvando...";
+
+    const dadosAtualizados = {
+      nomeCompleto: inputNome.value.trim(),
+      dataNascimento: inputNascimento.value,
+      documentoAluno: inputDocAluno.value.trim(),
+      telefoneAluno: inputTelAluno.value.trim(),
+      faixa: selectFaixa.value,
+      nomeResponsavel: inputNomeResp.value.trim(),
+      documentoResponsavel: inputDocResp.value.trim(),
+      enderecoResponsavel: inputEndResp.value.trim(),
+      telefoneResponsavel: inputTelResp.value.trim(),
+      email: aluno.email
+    };
+
+    try {
+      await db.collection("alunos").doc(aluno.id).update(dadosAtualizados);
+      await carregarAlunos();
+      abrirDetalhes({ ...aluno, ...dadosAtualizados });
+    } catch (err) {
+      msgEdicao.textContent = "Não foi possível salvar. Confira os campos obrigatórios.";
+      msgEdicao.className = "msg show error";
+      btnSalvar.disabled = false;
+      btnSalvar.textContent = "Salvar alterações";
+    }
+  });
+}
+
+async function excluirAluno(aluno) {
+  if (!confirm("Excluir o cadastro de " + aluno.nomeCompleto + "? Essa ação não pode ser desfeita.")) return;
+
+  await db.collection("alunos").doc(aluno.id).delete();
+  modalBackdrop.classList.remove("show");
+  await carregarAlunos();
 }
 
 function gerarRelatorio() {
