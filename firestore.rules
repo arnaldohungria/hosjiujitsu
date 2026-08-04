@@ -58,5 +58,52 @@ service cloud.firestore {
       allow read: if isSignedIn() && request.auth.uid == adminId;
       allow write: if false; // só é possível adicionar pelo Console do Firebase
     }
+
+    // ===== Rifa (compra pública, sem cadastro/login) =====
+    //
+    // Cada número (1 a 200) só vira documento quando é reservado — a ausência do
+    // documento É o estado "disponível". Isso dá reserva atômica "de graça": o
+    // visitante reserva N números com um único batch write contendo um `create`
+    // por número; se qualquer um deles já existir (outra pessoa reservou antes),
+    // a rule de `create` não bate (documento já existe → cai em `update`, que é
+    // bloqueado pra clientes) e o Firestore desfaz o batch inteiro. Só o Worker
+    // (Cloudflare, autenticado como service account — não passa pelas rules)
+    // marca como pago ou libera reservas expiradas.
+    function numeroRifaValido(numero, dados) {
+      return dados.numero is int && dados.numero == int(numero) && dados.numero >= 1 && dados.numero <= 200
+        && dados.status == 'reservado'
+        && dados.pedidoId is string && dados.pedidoId.size() > 0
+        && dados.reservadoEm == request.time;
+    }
+
+    match /rifaNumeros/{numero} {
+      allow read: if true; // cartela pública
+      allow create: if numeroRifaValido(numero, request.resource.data);
+      allow update, delete: if false;
+    }
+
+    // Um pedido cobre 1+ números pagos numa única cobrança Pix. Criado pelo
+    // visitante (sem login); os campos do Pix (QR code etc.) só existem depois
+    // que o Worker consulta o Mercado Pago — por isso `create` exige que eles
+    // ainda não estejam presentes.
+    function pedidoRifaValido(dados) {
+      return dados.numeros is list && dados.numeros.size() > 0 && dados.numeros.size() <= 200
+        && dados.nomeComprador is string && dados.nomeComprador.size() > 0 && dados.nomeComprador.size() < 100
+        && dados.telefoneComprador is string && dados.telefoneComprador.size() > 0 && dados.telefoneComprador.size() < 30
+        && dados.valorTotal is number && dados.valorTotal == dados.numeros.size() * 6
+        && dados.status == 'pendente'
+        && dados.criadoEm == request.time
+        && dados.keys().hasOnly(['numeros', 'nomeComprador', 'telefoneComprador', 'valorTotal', 'status', 'criadoEm']);
+    }
+
+    match /rifaPedidos/{pedidoId} {
+      // Documento só é acessível por get() (link direto, ID sabido pelo comprador
+      // logo após criar) — nunca por list(), então ninguém consegue varrer nomes
+      // e telefones de outros compradores.
+      allow get: if true;
+      allow list: if isAdmin();
+      allow create: if pedidoRifaValido(request.resource.data);
+      allow update, delete: if false;
+    }
   }
 }

@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rifa Solidária — HOS Jiu-Jitsu</title>
+<meta name="description" content="Rifa solidária do HOS Jiu-Jitsu: R$ 200 no Pix, renda revertida na compra de kimonos para crianças que não têm condições. Números a R$ 6,00.">
+
+<link rel="icon" type="image/png" href="assets/logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="nav" id="nav">
+  <div class="nav-inner">
+    <a href="index.html" class="nav-brand">
+      <img src="assets/logo.png" alt="HOS Jiu-Jitsu" class="nav-logo">
+      <span class="nav-word">HOS<b>JIU-JITSU</b></span>
+    </a>
+    <nav class="nav-links" id="navLinks">
+      <a href="index.html">Início</a>
+      <a href="index.html#localizacao">Localização</a>
+      <a href="index.html#contato">Contato</a>
+      <a href="https://instagram.com/hosjiujitsu" target="_blank" rel="noopener" class="nav-cta">@hosjiujitsu</a>
+      <a href="app/login.html" class="nav-aluno">Área do Aluno</a>
+    </nav>
+    <button class="nav-toggle" id="navToggle" aria-label="Abrir menu">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</header>
+
+<main>
+
+  <section class="section rifa-hero">
+    <div class="section-inner">
+      <div class="section-head center">
+        <p class="eyebrow">Rifa solidária</p>
+        <h1 class="rifa-title">200 NÚMEROS<br><span>R$ 200,00 NO PIX</span></h1>
+        <p class="rifa-sub">A renda é revertida na compra de <strong>kimonos para crianças que não têm condições de comprar</strong> — pra elas poderem treinar com a gente. O sorteio será feito em live, assim que a rifa fechar. Cada número custa <strong>R$ 6,00</strong>.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section section-alt">
+    <div class="section-inner">
+      <div class="rifa-legenda">
+        <span><i class="rifa-dot disponivel"></i> Disponível</span>
+        <span><i class="rifa-dot selecionado"></i> Selecionado</span>
+        <span><i class="rifa-dot reservado"></i> Reservado (aguardando pagamento)</span>
+        <span><i class="rifa-dot pago"></i> Vendido</span>
+      </div>
+
+      <div class="rifa-grid" id="rifaGrid"></div>
+
+      <div class="rifa-resumo" id="rifaResumo">
+        <div class="rifa-resumo-info">
+          <span id="resumoQtd">0 números selecionados</span>
+          <span id="resumoTotal">Total: R$ 0,00</span>
+        </div>
+      </div>
+
+      <form id="form-rifa" class="rifa-form">
+        <label for="nomeComprador">Nome completo</label>
+        <input type="text" id="nomeComprador" required>
+
+        <label for="telefoneComprador">Telefone (WhatsApp)</label>
+        <input type="tel" id="telefoneComprador" placeholder="(15) 99999-9999" required>
+
+        <button type="submit" class="btn btn-primary rifa-btn-gerar" id="btn-gerar-pix" disabled>Selecione ao menos 1 número</button>
+        <div class="msg" id="msg"></div>
+      </form>
+
+      <div class="rifa-pagamento" id="rifaPagamento" style="display:none;">
+        <h3 id="pagamentoTitulo">Pagamento</h3>
+        <div id="pagamentoConteudo"></div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <img src="assets/logo.png" alt="HOS Jiu-Jitsu" class="footer-logo">
+    <div class="footer-text">
+      <p class="footer-title">HOS Jiu-Jitsu</p>
+      <p>Hungria Old School Jiu-Jitsu &middot; Distrito de Rechan, Itapetininga-SP</p>
+      <a href="https://instagram.com/hosjiujitsu" target="_blank" rel="noopener">@hosjiujitsu</a>
+    </div>
+  </div>
+  <p class="footer-copy">&copy; <span id="year"></span> HOS Jiu-Jitsu &mdash; Projeto social sem fins lucrativos.</p>
+</footer>
+
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script src="app/firebase-init.js"></script>
+<script src="script.js"></script>
+<script>
+const WORKER_URL = "https://hosjiujitsu-rifa.academiaplus.workers.dev";
+const TOTAL_NUMEROS = 200;
+const PRECO_NUMERO = 6;
+
+const rifaGrid = document.getElementById("rifaGrid");
+const resumoQtd = document.getElementById("resumoQtd");
+const resumoTotal = document.getElementById("resumoTotal");
+const formRifa = document.getElementById("form-rifa");
+const btnGerarPix = document.getElementById("btn-gerar-pix");
+const msg = document.getElementById("msg");
+const rifaPagamento = document.getElementById("rifaPagamento");
+const pagamentoConteudo = document.getElementById("pagamentoConteudo");
+
+function formatarNumero(n) {
+  return String(n).padStart(3, "0");
+}
+
+function showMsg(text, type) {
+  msg.textContent = text;
+  msg.className = "msg show " + type;
+}
+
+// Estado ao vivo: mapa "001".."200" -> {status: 'reservado'|'pago'} ou undefined (= disponível).
+let estadoNumeros = {};
+const selecionados = new Set();
+let pedidoAtivo = false;
+
+function criarGrid() {
+  for (let n = 1; n <= TOTAL_NUMEROS; n++) {
+    const tile = document.createElement("button");
+    tile.type = "button";
+    tile.className = "rifa-numero";
+    tile.textContent = formatarNumero(n);
+    tile.dataset.numero = n;
+    tile.addEventListener("click", () => alternarSelecao(n, tile));
+    rifaGrid.appendChild(tile);
+  }
+}
+
+function alternarSelecao(numero, tile) {
+  if (pedidoAtivo) return;
+  const chave = formatarNumero(numero);
+  if (estadoNumeros[chave]) return; // já reservado ou pago, não clicável
+
+  if (selecionados.has(numero)) {
+    selecionados.delete(numero);
+    tile.classList.remove("selecionado");
+  } else {
+    selecionados.add(numero);
+    tile.classList.add("selecionado");
+  }
+  atualizarResumo();
+}
+
+function atualizarResumo() {
+  const qtd = selecionados.size;
+  resumoQtd.textContent = qtd + (qtd === 1 ? " número selecionado" : " números selecionados");
+  resumoTotal.textContent = "Total: R$ " + (qtd * PRECO_NUMERO).toFixed(2).replace(".", ",");
+  btnGerarPix.disabled = qtd === 0;
+  btnGerarPix.textContent = qtd === 0 ? "Selecione ao menos 1 número" : "Reservar e gerar Pix";
+}
+
+function renderizarEstadoTile(numero) {
+  const tile = rifaGrid.children[numero - 1];
+  const chave = formatarNumero(numero);
+  const dados = estadoNumeros[chave];
+  tile.classList.remove("reservado", "pago", "selecionado");
+  if (dados && dados.status === "pago") {
+    tile.classList.add("pago");
+    selecionados.delete(numero);
+  } else if (dados && dados.status === "reservado") {
+    tile.classList.add("reservado");
+    selecionados.delete(numero);
+  } else if (selecionados.has(numero)) {
+    tile.classList.add("selecionado");
+  }
+}
+
+criarGrid();
+atualizarResumo();
+
+// Escuta em tempo real: qualquer reserva/pagamento de qualquer visitante atualiza a cartela na hora.
+db.collection("rifaNumeros").onSnapshot((snap) => {
+  snap.docChanges().forEach((change) => {
+    const numero = change.doc.data().numero;
+    if (change.type === "removed") {
+      delete estadoNumeros[formatarNumero(numero)];
+    } else {
+      estadoNumeros[formatarNumero(numero)] = change.doc.data();
+    }
+    renderizarEstadoTile(numero);
+  });
+  atualizarResumo();
+});
+
+formRifa.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  if (selecionados.size === 0) return;
+
+  const nomeComprador = document.getElementById("nomeComprador").value.trim();
+  const telefoneComprador = document.getElementById("telefoneComprador").value.trim();
+
+  if (!nomeComprador || !telefoneComprador) {
+    showMsg("Preencha nome e telefone.", "error");
+    return;
+  }
+
+  btnGerarPix.disabled = true;
+  btnGerarPix.textContent = "Reservando...";
+
+  const numeros = Array.from(selecionados);
+  const valorTotal = numeros.length * PRECO_NUMERO;
+  const pedidoRef = db.collection("rifaPedidos").doc();
+
+  const batch = db.batch();
+  batch.set(pedidoRef, {
+    numeros,
+    nomeComprador,
+    telefoneComprador,
+    valorTotal,
+    status: "pendente",
+    criadoEm: firebase.firestore.FieldValue.serverTimestamp()
+  });
+  numeros.forEach((numero) => {
+    batch.set(db.collection("rifaNumeros").doc(formatarNumero(numero)), {
+      numero,
+      status: "reservado",
+      pedidoId: pedidoRef.id,
+      reservadoEm: firebase.firestore.FieldValue.serverTimestamp()
+    });
+  });
+
+  try {
+    await batch.commit();
+  } catch (err) {
+    showMsg("Um ou mais números foram reservados por outra pessoa agora há pouco. Escolha outros números e tente de novo.", "error");
+    numeros.forEach((n) => selecionados.delete(n));
+    btnGerarPix.disabled = false;
+    atualizarResumo();
+    return;
+  }
+
+  pedidoAtivo = true;
+  formRifa.querySelectorAll("input").forEach((el) => (el.disabled = true));
+  showMsg("Números reservados! Gerando o Pix...", "info");
+
+  await gerarEAcompanharPix(pedidoRef, valorTotal, numeros.length);
+});
+
+async function gerarEAcompanharPix(pedidoRef, valorTotal, quantidade) {
+  rifaPagamento.style.display = "block";
+  pagamentoConteudo.innerHTML = "";
+
+  let resposta;
+  try {
+    const r = await fetch(WORKER_URL + "/criar-pix", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        pedidoId: pedidoRef.id,
+        valor: valorTotal,
+        descricao: "Rifa HOS Jiu-Jitsu - " + quantidade + " número(s)"
+      })
+    });
+    resposta = await r.json();
+
+    if (r.status === 501) {
+      const p = document.createElement("p");
+      p.textContent = "Seus números estão reservados por 30 minutos! O pagamento automático via Pix ainda está sendo configurado — fale com a gente agora pelo WhatsApp pra garantir e combinar o pagamento:";
+      const link = document.createElement("a");
+      link.href = "https://wa.me/5515997076947";
+      link.target = "_blank";
+      link.rel = "noopener";
+      link.className = "btn btn-primary";
+      link.style.marginTop = "1rem";
+      link.textContent = "Falar no WhatsApp";
+      pagamentoConteudo.append(p, link);
+      showMsg("", "");
+      msg.className = "msg";
+      return;
+    }
+
+    if (!r.ok || !resposta.ok) throw new Error(resposta.erro || "Falha ao gerar Pix.");
+  } catch (err) {
+    const p = document.createElement("p");
+    p.textContent = "Não foi possível gerar o Pix agora. Seus números continuam reservados por 30 minutos — tente novamente ou fale no WhatsApp (15) 99707-6947.";
+    pagamentoConteudo.appendChild(p);
+    return;
+  }
+
+  const img = document.createElement("img");
+  img.src = "data:image/png;base64," + resposta.pixQrCodeBase64;
+  img.alt = "QR Code Pix";
+  img.className = "rifa-qr";
+
+  const label = document.createElement("p");
+  label.textContent = "Escaneie o QR Code ou copie o código Pix abaixo:";
+
+  const codigoBox = document.createElement("div");
+  codigoBox.className = "rifa-pix-codigo";
+  const codigoTexto = document.createElement("code");
+  codigoTexto.textContent = resposta.pixCopiaECola;
+  const btnCopiar = document.createElement("button");
+  btnCopiar.type = "button";
+  btnCopiar.className = "btn btn-ghost";
+  btnCopiar.textContent = "Copiar código";
+  btnCopiar.addEventListener("click", () => {
+    navigator.clipboard.writeText(resposta.pixCopiaECola);
+    btnCopiar.textContent = "Copiado!";
+    setTimeout(() => (btnCopiar.textContent = "Copiar código"), 2000);
+  });
+  codigoBox.append(codigoTexto, btnCopiar);
+
+  const aviso = document.createElement("p");
+  aviso.className = "rifa-aviso-expira";
+  aviso.textContent = "Assim que o pagamento for confirmado, seus números aparecem como \"Vendido\" automaticamente aqui na página. Se não pagar em 30 minutos, os números voltam a ficar disponíveis.";
+
+  pagamentoConteudo.append(img, label, codigoBox, aviso);
+
+  // Assim que o webhook do Mercado Pago confirmar o pagamento, o status muda pra "pago" aqui.
+  pedidoRef.onSnapshot((doc) => {
+    if (doc.exists && doc.data().status === "pago") {
+      pagamentoConteudo.innerHTML = "";
+      const ok = document.createElement("p");
+      ok.className = "rifa-pago-ok";
+      ok.textContent = "Pagamento confirmado! Muito obrigado por apoiar o projeto. 🥋";
+      pagamentoConteudo.appendChild(ok);
+    }
+  });
+}
+</script>
+</body>
+</html>
