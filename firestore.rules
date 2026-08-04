@@ -7,17 +7,21 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Valida tipo/tamanho dos campos de cadastro do aluno e restringe a faixa
-    // às opções reais do formulário. Telefones são opcionais no formulário,
-    // mas o campo sempre existe no documento (string vazia se não preenchido).
+    // Valida tipo/tamanho dos campos de cadastro (formulário "DADOS DO ALUNO").
+    // documentoAluno e telefoneAluno são opcionais no formulário — o campo sempre
+    // existe no documento (string vazia se não preenchido). Os dados do
+    // responsável (documento, endereço, telefone) são obrigatórios.
     function dadosAlunoValidos(dados) {
       return dados.nomeCompleto is string && dados.nomeCompleto.size() > 0 && dados.nomeCompleto.size() < 100
-        && dados.nomeResponsavel is string && dados.nomeResponsavel.size() > 0 && dados.nomeResponsavel.size() < 100
-        && dados.documento is string && dados.documento.size() > 0 && dados.documento.size() < 20
+        && dados.dataNascimento is string && dados.dataNascimento.size() > 0
+        && dados.documentoAluno is string && dados.documentoAluno.size() < 20
         && dados.telefoneAluno is string && dados.telefoneAluno.size() < 30
-        && dados.telefoneResponsavel is string && dados.telefoneResponsavel.size() < 30
-        && dados.email is string && dados.email.size() < 100
-        && dados.faixa in ['Branca', 'Cinza', 'Amarela', 'Laranja', 'Verde', 'Azul', 'Roxa', 'Marrom', 'Preta'];
+        && dados.faixa in ['Branca', 'Cinza', 'Amarela', 'Laranja', 'Verde', 'Azul', 'Roxa', 'Marrom', 'Preta']
+        && dados.nomeResponsavel is string && dados.nomeResponsavel.size() > 0 && dados.nomeResponsavel.size() < 100
+        && dados.documentoResponsavel is string && dados.documentoResponsavel.size() > 0 && dados.documentoResponsavel.size() < 20
+        && dados.enderecoResponsavel is string && dados.enderecoResponsavel.size() > 0 && dados.enderecoResponsavel.size() < 150
+        && dados.telefoneResponsavel is string && dados.telefoneResponsavel.size() > 0 && dados.telefoneResponsavel.size() < 30
+        && dados.email is string && dados.email.size() < 100;
     }
 
     match /alunos/{alunoId} {

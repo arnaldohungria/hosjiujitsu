@@ -23,24 +23,23 @@
   <div class="card">
     <h2>Criar Cadastro</h2>
     <form id="form-cadastro">
-      <label for="nomeCompleto">Nome completo do aluno</label>
+      <p class="form-section-title">Dados do aluno</p>
+
+      <label for="nomeCompleto">Nome completo</label>
       <input type="text" id="nomeCompleto" required>
 
-      <label for="nomeResponsavel">Nome do responsável (pai, mãe ou responsável)</label>
-      <input type="text" id="nomeResponsavel" required>
+      <label for="dataNascimento">Data de nascimento</label>
+      <input type="date" id="dataNascimento" required>
 
-      <label for="documento">RG ou CPF</label>
-      <input type="text" id="documento" required>
+      <label for="documentoAluno">RG ou CPF</label>
+      <input type="text" id="documentoAluno">
+      <p class="field-hint">Opcional</p>
 
-      <label for="telefoneAluno">Telefone do aluno</label>
+      <label for="telefoneAluno">Telefone</label>
       <input type="tel" id="telefoneAluno" placeholder="(15) 99999-9999">
       <p class="field-hint">Opcional</p>
 
-      <label for="telefoneResponsavel">Telefone do responsável</label>
-      <input type="tel" id="telefoneResponsavel" placeholder="(15) 99999-9999">
-      <p class="field-hint">Opcional</p>
-
-      <label for="faixa">Graduação atual (faixa)</label>
+      <label for="faixa">Faixa</label>
       <select id="faixa" required>
         <option value="">Selecione...</option>
         <option value="Branca">Branca</option>
@@ -53,6 +52,22 @@
         <option value="Marrom">Marrom</option>
         <option value="Preta">Preta</option>
       </select>
+
+      <p class="form-section-title">Dados do pai, mãe ou responsável</p>
+
+      <label for="nomeResponsavel">Nome completo</label>
+      <input type="text" id="nomeResponsavel" required>
+
+      <label for="documentoResponsavel">RG ou CPF</label>
+      <input type="text" id="documentoResponsavel" required>
+
+      <label for="enderecoResponsavel">Endereço (rua e número)</label>
+      <input type="text" id="enderecoResponsavel" required>
+
+      <label for="telefoneResponsavel">Telefone</label>
+      <input type="tel" id="telefoneResponsavel" placeholder="(15) 99999-9999" required>
+
+      <p class="form-section-title">Acesso</p>
 
       <label for="email">E-mail</label>
       <input type="email" id="email" required>
@@ -89,11 +104,16 @@ form.addEventListener("submit", async (e) => {
   e.preventDefault();
 
   const nomeCompleto = document.getElementById("nomeCompleto").value.trim();
-  const nomeResponsavel = document.getElementById("nomeResponsavel").value.trim();
-  const documento = document.getElementById("documento").value.trim();
+  const dataNascimento = document.getElementById("dataNascimento").value;
+  const documentoAluno = document.getElementById("documentoAluno").value.trim();
   const telefoneAluno = document.getElementById("telefoneAluno").value.trim();
-  const telefoneResponsavel = document.getElementById("telefoneResponsavel").value.trim();
   const faixa = document.getElementById("faixa").value;
+
+  const nomeResponsavel = document.getElementById("nomeResponsavel").value.trim();
+  const documentoResponsavel = document.getElementById("documentoResponsavel").value.trim();
+  const enderecoResponsavel = document.getElementById("enderecoResponsavel").value.trim();
+  const telefoneResponsavel = document.getElementById("telefoneResponsavel").value.trim();
+
   const email = document.getElementById("email").value.trim();
   const senha = document.getElementById("senha").value;
   const senha2 = document.getElementById("senha2").value;
@@ -110,11 +130,14 @@ form.addEventListener("submit", async (e) => {
     const cred = await auth.createUserWithEmailAndPassword(email, senha);
     await db.collection("alunos").doc(cred.user.uid).set({
       nomeCompleto,
-      nomeResponsavel,
-      documento,
+      dataNascimento,
+      documentoAluno,
       telefoneAluno,
-      telefoneResponsavel,
       faixa,
+      nomeResponsavel,
+      documentoResponsavel,
+      enderecoResponsavel,
+      telefoneResponsavel,
       email,
       criadoEm: firebase.firestore.FieldValue.serverTimestamp()
     });

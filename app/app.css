@@ -68,6 +68,21 @@ input:focus, select:focus{outline:none; border-color:var(--purple);}
 
 .field-hint{font-size:.78rem; color:var(--text-dim); margin-top:4px;}
 
+.form-section-title{
+  font-family:var(--mono); font-size:.75rem; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--purple-deep); margin-top:28px; padding-top:20px; border-top:1px solid var(--line);
+}
+.form-section-title:first-of-type{margin-top:0; padding-top:0; border-top:none;}
+
+.app-nav{display:flex; gap:1.4rem; margin-bottom:24px;}
+.app-nav a{font-family:var(--mono); font-size:.85rem; color:var(--text-dim); padding-bottom:6px; border-bottom:2px solid transparent;}
+.app-nav a.active{color:var(--purple-deep); border-color:var(--purple);}
+
+.em-breve{
+  text-align:center; padding:48px 20px; color:var(--text-dim);
+}
+.em-breve .icone{font-size:2.5rem; margin-bottom:12px;}
+
 .btn{
   display:inline-block; width:100%; background:var(--purple); color:#fff; border:none;
   padding:14px 24px; border-radius:8px; font-weight:700; font-size:1rem; letter-spacing:.3px;

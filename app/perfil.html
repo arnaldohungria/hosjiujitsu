@@ -21,11 +21,21 @@
 </header>
 
 <main class="app-main">
+  <nav class="app-nav">
+    <a href="perfil.html" class="active">Meus Dados</a>
+    <a href="conteudos.html">Conteúdos</a>
+  </nav>
+
   <div class="card">
-    <h2>Meus dados</h2>
-    <div id="perfil-conteudo">
+    <h2>Dados do aluno</h2>
+    <div id="perfil-aluno">
       <p style="color:var(--text-dim);">Carregando...</p>
     </div>
+  </div>
+
+  <div class="card">
+    <h2>Dados do responsável</h2>
+    <div id="perfil-responsavel"></div>
   </div>
 </main>
 
@@ -36,9 +46,32 @@
 <script>
 const btnSair = document.getElementById("btn-sair");
 const saudacao = document.getElementById("saudacao");
-const perfilConteudo = document.getElementById("perfil-conteudo");
+const perfilAluno = document.getElementById("perfil-aluno");
+const perfilResponsavel = document.getElementById("perfil-responsavel");
 
 btnSair.addEventListener("click", () => auth.signOut().then(() => window.location.href = "login.html"));
+
+// Nunca usar innerHTML com dados do aluno/responsável (conteúdo livre, digitado
+// por eles) — cada linha é montada via createElement/textContent, que escapam
+// qualquer HTML/script automaticamente.
+function linha(container, label, valor) {
+  const row = document.createElement("div");
+  row.className = "profile-row";
+  const spanLabel = document.createElement("span");
+  spanLabel.className = "label";
+  spanLabel.textContent = label;
+  const spanValue = document.createElement("span");
+  spanValue.className = "value";
+  spanValue.textContent = valor;
+  row.append(spanLabel, spanValue);
+  container.appendChild(row);
+}
+
+function formatarData(iso) {
+  if (!iso) return "-";
+  const [ano, mes, dia] = iso.split("-");
+  return dia + "/" + mes + "/" + ano;
+}
 
 auth.onAuthStateChanged(async (user) => {
   if (!user) {
@@ -48,49 +81,37 @@ auth.onAuthStateChanged(async (user) => {
 
   const doc = await db.collection("alunos").doc(user.uid).get();
   if (!doc.exists) {
-    perfilConteudo.textContent = "Cadastro não encontrado.";
+    perfilAluno.textContent = "Cadastro não encontrado.";
     return;
   }
 
   const aluno = doc.data();
   saudacao.textContent = "Olá, " + aluno.nomeCompleto.split(" ")[0];
 
-  // Nunca usar innerHTML com dados do aluno (conteúdo livre, digitado por ele) —
-  // cada valor é sempre atribuído via textContent, que escapa qualquer HTML/script.
-  perfilConteudo.innerHTML = "";
-
-  const linhas = [
-    ["Nome completo", aluno.nomeCompleto],
-    ["Responsável", aluno.nomeResponsavel],
-    ["RG ou CPF", aluno.documento],
-    ["Telefone do aluno", aluno.telefoneAluno || "-"],
-    ["Telefone do responsável", aluno.telefoneResponsavel || "-"],
-    ["E-mail", aluno.email]
-  ];
-
-  linhas.forEach(([label, valor]) => {
-    const row = document.createElement("div");
-    row.className = "profile-row";
-    const spanLabel = document.createElement("span");
-    spanLabel.className = "label";
-    spanLabel.textContent = label;
-    const spanValue = document.createElement("span");
-    spanValue.className = "value";
-    spanValue.textContent = valor;
-    row.append(spanLabel, spanValue);
-    perfilConteudo.appendChild(row);
-  });
+  perfilAluno.innerHTML = "";
+  linha(perfilAluno, "Nome completo", aluno.nomeCompleto);
+  linha(perfilAluno, "Data de nascimento", formatarData(aluno.dataNascimento));
+  linha(perfilAluno, "RG ou CPF", aluno.documentoAluno || "-");
+  linha(perfilAluno, "Telefone", aluno.telefoneAluno || "-");
 
   const rowFaixa = document.createElement("div");
   rowFaixa.className = "profile-row";
   const labelFaixa = document.createElement("span");
   labelFaixa.className = "label";
-  labelFaixa.textContent = "Graduação (faixa)";
+  labelFaixa.textContent = "Faixa";
   const beltTag = document.createElement("span");
   beltTag.className = "belt-tag";
   beltTag.textContent = aluno.faixa;
   rowFaixa.append(labelFaixa, beltTag);
-  perfilConteudo.appendChild(rowFaixa);
+  perfilAluno.appendChild(rowFaixa);
+
+  linha(perfilAluno, "E-mail", aluno.email);
+
+  perfilResponsavel.innerHTML = "";
+  linha(perfilResponsavel, "Nome completo", aluno.nomeResponsavel);
+  linha(perfilResponsavel, "RG ou CPF", aluno.documentoResponsavel);
+  linha(perfilResponsavel, "Endereço", aluno.enderecoResponsavel);
+  linha(perfilResponsavel, "Telefone", aluno.telefoneResponsavel);
 });
 </script>
 </body>
