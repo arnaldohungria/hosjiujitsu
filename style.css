@@ -256,7 +256,8 @@ h1,h2,h3{
   letter-spacing:.03em;
   margin-top:.4rem;
 }
-.rifa-sub{max-width:640px; margin:0 auto; text-align:center; color:var(--text-dim);}
+.rifa-sub{max-width:640px; margin:0 auto .9rem; text-align:center; color:var(--text-dim);}
+.rifa-info-pratica{font-family:var(--mono); font-size:.85rem; color:var(--purple-deep); margin-top:1.4rem;}
 
 .rifa-legenda{
   display:flex; flex-wrap:wrap; gap:1.4rem; justify-content:center;
