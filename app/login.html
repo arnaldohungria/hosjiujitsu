@@ -60,8 +60,9 @@ form.addEventListener("submit", async (e) => {
   btn.textContent = "Entrando...";
 
   try {
-    await auth.signInWithEmailAndPassword(email, senha);
-    window.location.href = "perfil.html";
+    const cred = await auth.signInWithEmailAndPassword(email, senha);
+    const adminDoc = await db.collection("admins").doc(cred.user.uid).get();
+    window.location.href = adminDoc.exists ? "admin.html" : "perfil.html";
   } catch (err) {
     showMsg("E-mail ou senha incorretos.", "error");
     btn.disabled = false;
