@@ -100,6 +100,14 @@ function docUrl(env, path) {
   return documentsRoot(env) + "/" + path;
 }
 
+// Nome de recurso "nu" (sem o https://.../v1 na frente) — é o formato que a
+// REST API exige dentro do corpo JSON de :batchGet e :commit (campos
+// `documents`, `name` de um Write.update, `delete`). É diferente da URL
+// usada pra fazer a própria chamada HTTP (essa sim precisa do https://...).
+function resourceName(env, path) {
+  return `projects/${env.FIREBASE_PROJECT_ID}/databases/(default)/documents/${path}`;
+}
+
 // PATCH com updateMask = upsert (cria se não existir, atualiza os campos informados se existir).
 async function patchDocument(env, path, data) {
   const accessToken = await getAccessToken(env);
@@ -146,11 +154,10 @@ async function deleteDocument(env, path) {
 // do Worker). Retorna um mapa path -> campos (ou null se o documento não existe).
 async function batchGetDocuments(env, paths) {
   const accessToken = await getAccessToken(env);
-  const root = documentsRoot(env);
-  const resp = await fetch(root + ":batchGet", {
+  const resp = await fetch(documentsRoot(env) + ":batchGet", {
     method: "POST",
     headers: { Authorization: "Bearer " + accessToken, "Content-Type": "application/json" },
-    body: JSON.stringify({ documents: paths.map((p) => root + "/" + p) })
+    body: JSON.stringify({ documents: paths.map((p) => resourceName(env, p)) })
   });
 
   if (!resp.ok) throw new Error("Falha ao ler em lote do Firestore: " + (await resp.text()));
@@ -184,13 +191,13 @@ async function commitWrites(env, writes) {
 
 function writeUpdate(env, path, data) {
   return {
-    update: { name: documentsRoot(env) + "/" + path, fields: toFirestoreFields(data) },
+    update: { name: resourceName(env, path), fields: toFirestoreFields(data) },
     updateMask: { fieldPaths: Object.keys(data) }
   };
 }
 
 function writeDelete(env, path) {
-  return { delete: documentsRoot(env) + "/" + path };
+  return { delete: resourceName(env, path) };
 }
 
 export { patchDocument, getDocument, deleteDocument, batchGetDocuments, commitWrites, writeUpdate, writeDelete };
