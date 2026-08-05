@@ -35,6 +35,11 @@
 
     <div class="card">
       <h2>Cartela (200 números)</h2>
+      <div class="rifa-resumo-admin" id="resumoNumeros">
+        <div class="resumo-item"><span class="resumo-num" id="resumoVendidos">0</span><span class="resumo-label">Vendidos</span></div>
+        <div class="resumo-item"><span class="resumo-num" id="resumoReservados">0</span><span class="resumo-label">Reservados</span></div>
+        <div class="resumo-item"><span class="resumo-num" id="resumoDisponiveis">200</span><span class="resumo-label">Disponíveis</span></div>
+      </div>
       <div class="rifa-legenda">
         <span><i class="rifa-dot disponivel"></i> Disponível</span>
         <span><i class="rifa-dot reservado"></i> Reservado</span>
@@ -71,8 +76,12 @@ const cardNegado = document.getElementById("card-negado");
 const conteudo = document.getElementById("conteudo");
 const rifaGrid = document.getElementById("rifaGrid");
 const tabelaPedidos = document.querySelector("#tabela-pedidos tbody");
+const resumoVendidos = document.getElementById("resumoVendidos");
+const resumoReservados = document.getElementById("resumoReservados");
+const resumoDisponiveis = document.getElementById("resumoDisponiveis");
 
 const TOTAL_NUMEROS = 200;
+const statusNumeros = {}; // numero -> "reservado" | "pago"
 
 btnSair.addEventListener("click", () => auth.signOut().then(() => window.location.href = "login.html"));
 
@@ -111,11 +120,25 @@ function iniciarGrid() {
       const numero = change.doc.data().numero;
       const tile = rifaGrid.children[numero - 1];
       tile.classList.remove("reservado", "pago");
-      if (change.type !== "removed") {
-        tile.classList.add(change.doc.data().status);
+      if (change.type === "removed") {
+        delete statusNumeros[numero];
+      } else {
+        const status = change.doc.data().status;
+        tile.classList.add(status);
+        statusNumeros[numero] = status;
       }
     });
+    atualizarResumoNumeros();
   });
+}
+
+function atualizarResumoNumeros() {
+  const valores = Object.values(statusNumeros);
+  const vendidos = valores.filter((s) => s === "pago").length;
+  const reservados = valores.filter((s) => s === "reservado").length;
+  resumoVendidos.textContent = vendidos;
+  resumoReservados.textContent = reservados;
+  resumoDisponiveis.textContent = TOTAL_NUMEROS - vendidos - reservados;
 }
 
 function formatarValor(v) {

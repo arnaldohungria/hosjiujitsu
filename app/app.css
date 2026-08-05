@@ -145,6 +145,14 @@ table.admin-table tr:hover td{background:var(--bg-alt); cursor:pointer;}
 }
 .btn-excluir:hover{background:#fbe3ef;}
 
+.rifa-resumo-admin{display:flex; gap:1.5rem; margin-bottom:20px; flex-wrap:wrap;}
+.rifa-resumo-admin .resumo-item{
+  flex:1; min-width:120px; background:var(--bg-alt); border:1px solid var(--line);
+  border-radius:8px; padding:14px 18px; text-align:center;
+}
+.rifa-resumo-admin .resumo-num{display:block; font-family:var(--display); font-size:1.8rem; color:var(--purple-deep);}
+.rifa-resumo-admin .resumo-label{font-family:var(--mono); font-size:.72rem; letter-spacing:.08em; text-transform:uppercase; color:var(--text-dim);}
+
 .pedido-tag{display:inline-block; padding:3px 10px; border-radius:999px; font-size:.75rem; font-weight:700; color:#fff;}
 .pedido-tag.pago{background:#1a7a34;}
 .pedido-tag.pendente{background:var(--purple);}
