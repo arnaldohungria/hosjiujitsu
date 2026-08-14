@@ -111,6 +111,13 @@ input:focus, select:focus{outline:none; border-color:var(--purple);}
   font-weight:700; color:#fff; background:var(--purple);
 }
 
+.contador-badge{
+  display:inline-block; min-width:1.6em; padding:2px 9px; border-radius:999px;
+  font-family:var(--mono); font-size:.85rem; font-weight:700;
+  color:var(--purple-deep); background:var(--bg-alt); border:1px solid var(--line);
+  vertical-align:middle; margin-left:6px;
+}
+
 .card-header-row{display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:24px;}
 .card-header-row h2{margin-bottom:0;}
 

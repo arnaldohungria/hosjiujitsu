@@ -34,7 +34,7 @@
 
     <div class="card">
       <div class="card-header-row">
-        <h2>Alunos cadastrados</h2>
+        <h2>Alunos cadastrados <span class="contador-badge" id="contadorAlunos">0</span></h2>
         <button type="button" class="btn-secundario" id="btn-relatorio">Imprimir relatório</button>
       </div>
       <div style="overflow-x:auto;">
@@ -110,6 +110,8 @@ function formatarData(iso) {
 // createElement/textContent, que escapam qualquer HTML/script automaticamente.
 async function carregarAlunos() {
   const snap = await db.collection("alunos").orderBy("nomeCompleto").get();
+
+  document.getElementById("contadorAlunos").textContent = snap.size;
 
   if (snap.empty) {
     tabelaAlunos.innerHTML = "<tr><td colspan='5'>Nenhum aluno cadastrado.</td></tr>";
