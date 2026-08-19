@@ -33,7 +33,7 @@ async function handleCriarPix(request, env) {
   }
 
   const body = await request.json();
-  const { pedidoId, valor, descricao } = body;
+  const { pedidoId, valor, descricao, deviceId } = body;
 
   if (!pedidoId || !valor || valor <= 0 || !descricao) {
     return json({ erro: "Campos obrigatórios: pedidoId, valor, descricao." }, 400);
@@ -43,7 +43,7 @@ async function handleCriarPix(request, env) {
   if (!pedido) return json({ erro: "Pedido não encontrado." }, 404);
   if (pedido.status !== "pendente") return json({ erro: "Pedido já não está mais pendente." }, 409);
 
-  const pagamento = await criarPagamentoPix(env, { referenciaId: pedidoId, valor, descricao });
+  const pagamento = await criarPagamentoPix(env, { referenciaId: pedidoId, valor, descricao, deviceId });
 
   await patchDocument(env, "rifaPedidos/" + pedidoId, {
     pixCopiaECola: pagamento.pixCopiaECola,
@@ -61,7 +61,7 @@ async function handleCriarPixDoacao(request, env) {
   }
 
   const body = await request.json();
-  const { doacaoId, valor, descricao } = body;
+  const { doacaoId, valor, descricao, deviceId } = body;
 
   if (!doacaoId || !valor || valor <= 0 || !descricao) {
     return json({ erro: "Campos obrigatórios: doacaoId, valor, descricao." }, 400);
@@ -71,7 +71,7 @@ async function handleCriarPixDoacao(request, env) {
   if (!doacao) return json({ erro: "Doação não encontrada." }, 404);
   if (doacao.status !== "pendente") return json({ erro: "Doação já não está mais pendente." }, 409);
 
-  const pagamento = await criarPagamentoPix(env, { referenciaId: doacaoId, valor, descricao });
+  const pagamento = await criarPagamentoPix(env, { referenciaId: doacaoId, valor, descricao, deviceId });
 
   await patchDocument(env, "doacoes/" + doacaoId, {
     pixCopiaECola: pagamento.pixCopiaECola,

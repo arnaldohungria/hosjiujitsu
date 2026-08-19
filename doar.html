@@ -90,6 +90,8 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script src="app/firebase-init.js"></script>
 <script src="script.js"></script>
+<!-- Gera window.MP_DEVICE_SESSION_ID, exigido pelo antifraude do Mercado Pago pra aprovar o Pix. -->
+<script src="https://www.mercadopago.com/v2/security.js" view="checkout"></script>
 <script>
 const WORKER_URL = "https://hosjiujitsu-rifa.academiaplus.workers.dev";
 
@@ -166,7 +168,8 @@ async function gerarEAcompanharPixDoacao(doacaoRef, valor) {
       body: JSON.stringify({
         doacaoId: doacaoRef.id,
         valor,
-        descricao: "Doação HOS Jiu-Jitsu"
+        descricao: "Doação HOS Jiu-Jitsu",
+        deviceId: window.MP_DEVICE_SESSION_ID
       })
     });
     resposta = await r.json();

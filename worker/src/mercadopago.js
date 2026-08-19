@@ -1,14 +1,20 @@
 // Cliente mínimo da API do Mercado Pago (Pix) — usado tanto pela rifa quanto pelas doações livres.
 
-async function criarPagamentoPix(env, { referenciaId, valor, descricao }) {
+async function criarPagamentoPix(env, { referenciaId, valor, descricao, deviceId }) {
+  const headers = {
+    Authorization: "Bearer " + env.MP_ACCESS_TOKEN,
+    "Content-Type": "application/json",
+    // Evita cobrar duas vezes se o visitante clicar duas vezes sem querer.
+    "X-Idempotency-Key": referenciaId
+  };
+  // ID do dispositivo (gerado pelo security.js do Mercado Pago no navegador do
+  // comprador) — exigido pelo antifraude deles pra aprovar a criação do Pix;
+  // sem isso o PolicyAgent bloqueia com PA_UNAUTHORIZED_RESULT_FROM_POLICIES.
+  if (deviceId) headers["X-meli-session-id"] = deviceId;
+
   const resp = await fetch("https://api.mercadopago.com/v1/payments", {
     method: "POST",
-    headers: {
-      Authorization: "Bearer " + env.MP_ACCESS_TOKEN,
-      "Content-Type": "application/json",
-      // Evita cobrar duas vezes se o visitante clicar duas vezes sem querer.
-      "X-Idempotency-Key": referenciaId
-    },
+    headers,
     body: JSON.stringify({
       transaction_amount: valor,
       description: descricao,
