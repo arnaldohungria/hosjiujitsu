@@ -40,6 +40,7 @@ service cloud.firestore {
         && dados.email is string && dados.email.size() < 100
         && (!('peso' in dados) || (dados.peso is number && dados.peso > 0 && dados.peso < 300))
         && (!('graus' in dados) || (dados.graus is int && dados.graus >= 0 && dados.graus <= 4))
+        && (!('totalPresencas' in dados) || (dados.totalPresencas is int && dados.totalPresencas >= 0))
         && (!alunoMenorDeIdade(dados.dataNascimento) || (
           dados.nomeResponsavel.size() > 0
           && dados.documentoResponsavel.size() > 0
@@ -47,14 +48,25 @@ service cloud.firestore {
         ));
     }
 
+    // totalPresencas só é escrito pelo admin (chamada manual, ver coleção
+    // `presencas` abaixo) — o próprio aluno pode editar seu cadastro livremente,
+    // mas não pode alterar sua própria contagem de presenças por essa via.
+    // Compara com 0 quando a chave ainda não existe (documento nunca teve
+    // presença lançada) pra não quebrar o primeiro update de um aluno assim.
+    function totalPresencasInalterado() {
+      return ('totalPresencas' in resource.data ? resource.data.totalPresencas : 0)
+        == ('totalPresencas' in request.resource.data ? request.resource.data.totalPresencas : 0);
+    }
+
     match /alunos/{alunoId} {
       allow create: if isSignedIn() && request.auth.uid == alunoId
-        && dadosAlunoValidos(request.resource.data);
+        && dadosAlunoValidos(request.resource.data)
+        && !('totalPresencas' in request.resource.data);
 
       allow read: if isSignedIn() && (request.auth.uid == alunoId || isAdmin());
 
-      allow update: if isSignedIn() && (request.auth.uid == alunoId || isAdmin())
-        && dadosAlunoValidos(request.resource.data);
+      allow update: if isSignedIn() && dadosAlunoValidos(request.resource.data)
+        && (isAdmin() || (request.auth.uid == alunoId && totalPresencasInalterado()));
 
       allow delete: if isAdmin();
     }
@@ -142,6 +154,48 @@ service cloud.firestore {
         && request.resource.data.criadoEm == request.time;
       allow update: if isAdmin() && avisoCamposValidos(request.resource.data);
       allow delete: if isAdmin();
+    }
+
+    // ===== Presença (chamada manual do professor) =====
+    // Muitas crianças do projeto não têm celular, então não existe check-in do
+    // próprio aluno — só o professor lança presença, aula por aula. Cada
+    // presença é 1 documento por aluno+data, id determinístico
+    // "{alunoId}_{data}" (mesmo padrão de "existência = estado" já usado em
+    // rifaNumeros): existir = esteve presente naquele dia. O client escreve em
+    // batch: cria/apaga o documento aqui E incrementa/decrementa
+    // alunos/{id}.totalPresencas e ranking/{id}.totalPresencas juntos.
+    function presencaValida(dados) {
+      return dados.alunoId is string && dados.alunoId.size() > 0
+        && exists(/databases/$(database)/documents/alunos/$(dados.alunoId))
+        && dados.data is string && dados.data.size() == 10
+        && dados.criadoEm == request.time;
+    }
+
+    match /presencas/{presencaId} {
+      allow read: if isSignedIn();
+      allow create: if isAdmin() && presencaValida(request.resource.data)
+        && presencaId == request.resource.data.alunoId + '_' + request.resource.data.data;
+      allow update: if false;
+      allow delete: if isAdmin();
+    }
+
+    // ===== Ranking (visão pública, só o essencial) =====
+    // Existe separado de `alunos` de propósito: o ranking é lido por QUALQUER
+    // aluno logado (pra ver a colocação de todo mundo), mas o cadastro completo
+    // em `alunos` tem RG/CPF/endereço/telefone do responsável — dados que um
+    // aluno não pode ver dos colegas. Por isso o documento aqui guarda só
+    // primeiro nome + faixa + contagem, nunca o cadastro inteiro. totalPresencas
+    // é opcional (chave só passa a existir quando o aluno tem alguma presença
+    // lançada) pra não forçar todo mundo a aparecer com "0" no ranking.
+    function rankingValido(dados) {
+      return dados.primeiroNome is string && dados.primeiroNome.size() > 0 && dados.primeiroNome.size() < 50
+        && dados.faixa in ['Branca', 'Cinza', 'Amarela', 'Laranja', 'Verde', 'Azul', 'Roxa', 'Marrom', 'Preta']
+        && (!('totalPresencas' in dados) || (dados.totalPresencas is int && dados.totalPresencas >= 0));
+    }
+
+    match /ranking/{alunoId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin() && rankingValido(request.resource.data);
     }
   }
 }

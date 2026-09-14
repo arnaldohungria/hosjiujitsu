@@ -24,6 +24,7 @@
   <nav class="app-nav">
     <a href="mural.html">Mural</a>
     <a href="perfil.html" class="active">Meus Dados</a>
+    <a href="ranking.html">Ranking</a>
     <a href="conteudos.html">Conteúdos</a>
   </nav>
 
@@ -207,6 +208,7 @@ function renderizarVisualizacao(aluno) {
 
   linha(perfilAluno, "Graus", formatarGraus(aluno.graus));
   linha(perfilAluno, "Peso atual", formatarPeso(aluno.peso));
+  linha(perfilAluno, "Presenças", String(aluno.totalPresencas || 0));
   linha(perfilAluno, "E-mail", aluno.email);
 
   perfilResponsavel.innerHTML = "";

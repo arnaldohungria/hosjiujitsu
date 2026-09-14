@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ranking de Presenças - HOS Jiu-Jitsu</title>
+<link rel="icon" type="image/png" href="../assets/logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+
+<header class="app-header">
+  <div class="logo-wrap">
+    <img src="../assets/logo.png" alt="Logo">
+    <h1 id="saudacao">Área do Aluno</h1>
+  </div>
+  <span class="sair" id="btn-sair">Sair</span>
+</header>
+
+<main class="app-main">
+  <nav class="app-nav">
+    <a href="mural.html">Mural</a>
+    <a href="perfil.html">Meus Dados</a>
+    <a href="ranking.html" class="active">Ranking</a>
+    <a href="conteudos.html">Conteúdos</a>
+  </nav>
+
+  <div class="card">
+    <h2>Ranking de presenças</h2>
+    <p class="field-hint" style="margin-bottom:20px;">Quem mais treina, mais sobe. Atualizado a cada chamada do professor.</p>
+    <div id="lista-ranking">
+      <p style="color:var(--text-dim);">Carregando...</p>
+    </div>
+    <div id="sua-posicao" class="ranking-sua-posicao" style="display:none;"></div>
+  </div>
+</main>
+
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script src="firebase-init.js"></script>
+<script>
+const btnSair = document.getElementById("btn-sair");
+const saudacao = document.getElementById("saudacao");
+const listaRanking = document.getElementById("lista-ranking");
+const suaPosicao = document.getElementById("sua-posicao");
+
+btnSair.addEventListener("click", () => auth.signOut().then(() => window.location.href = "login.html"));
+
+const TOP_CLASSE = { 0: "top1", 1: "top2", 2: "top3" };
+
+// primeiroNome/faixa vêm do cadastro (via chamada do professor) — mesmo sendo
+// só o primeiro nome, nunca usar innerHTML, sempre createElement/textContent.
+function linhaRanking(posicao, primeiroNome, faixa, total, ehVoceMesmo) {
+  const row = document.createElement("div");
+  row.className = "ranking-row" + (TOP_CLASSE[posicao] ? " " + TOP_CLASSE[posicao] : "") + (ehVoceMesmo ? " mine" : "");
+
+  const pos = document.createElement("span");
+  pos.className = "ranking-pos";
+  pos.textContent = String(posicao + 1);
+
+  const nome = document.createElement("span");
+  nome.className = "ranking-nome";
+  nome.textContent = primeiroNome + (ehVoceMesmo ? " (você)" : "");
+
+  const beltTag = document.createElement("span");
+  beltTag.className = "belt-tag";
+  beltTag.textContent = faixa;
+
+  const count = document.createElement("span");
+  count.className = "ranking-count";
+  const rotulo = document.createElement("span");
+  rotulo.className = "rotulo";
+  rotulo.textContent = total === 1 ? "presença" : "presenças";
+  count.append(document.createTextNode(String(total)), rotulo);
+
+  row.append(pos, nome, beltTag, count);
+  return row;
+}
+
+auth.onAuthStateChanged(async (user) => {
+  if (!user) {
+    window.location.href = "login.html";
+    return;
+  }
+
+  const meuDoc = await db.collection("alunos").doc(user.uid).get();
+  if (meuDoc.exists) {
+    saudacao.textContent = "Olá, " + meuDoc.data().nomeCompleto.split(" ")[0];
+  }
+
+  try {
+    const snap = await db.collection("ranking").orderBy("totalPresencas", "desc").limit(20).get();
+
+    listaRanking.innerHTML = "";
+
+    if (snap.empty) {
+      const p = document.createElement("p");
+      p.style.color = "var(--text-dim)";
+      p.textContent = "Ainda não tem presenças lançadas. Assim que o professor fizer a primeira chamada, o ranking aparece aqui.";
+      listaRanking.appendChild(p);
+    } else {
+      let apareceNoTop = false;
+      snap.docs.forEach((doc, i) => {
+        const r = doc.data();
+        const ehVoceMesmo = doc.id === user.uid;
+        if (ehVoceMesmo) apareceNoTop = true;
+        listaRanking.appendChild(linhaRanking(i, r.primeiroNome, r.faixa, r.totalPresencas || 0, ehVoceMesmo));
+      });
+
+      if (!apareceNoTop && meuDoc.exists) {
+        const meuTotal = meuDoc.data().totalPresencas || 0;
+        suaPosicao.innerHTML = "";
+        const titulo = document.createElement("p");
+        titulo.className = "field-hint";
+        titulo.textContent = "Sua colocação:";
+        suaPosicao.appendChild(titulo);
+        suaPosicao.appendChild(linhaRanking(-1, "Você", meuDoc.data().faixa, meuTotal, true));
+        suaPosicao.querySelector(".ranking-pos").textContent = "-";
+        suaPosicao.style.display = "block";
+      }
+    }
+  } catch (err) {
+    listaRanking.innerHTML = "";
+    const p = document.createElement("p");
+    p.style.color = "var(--text-dim)";
+    p.textContent = "Não foi possível carregar o ranking.";
+    listaRanking.appendChild(p);
+  }
+});
+</script>
+</body>
+</html>

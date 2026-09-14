@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chamada - Painel do Professor - HOS Jiu-Jitsu</title>
+<link rel="icon" type="image/png" href="../assets/logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+
+<header class="app-header">
+  <div class="logo-wrap">
+    <img src="../assets/logo.png" alt="Logo">
+    <h1>Chamada &mdash; Painel do Professor</h1>
+  </div>
+  <span class="sair" id="btn-sair">Sair</span>
+</header>
+
+<main class="app-main">
+  <div class="card" id="card-negado" style="display:none;">
+    <h2>Acesso restrito</h2>
+    <p>Esta área é exclusiva para o professor.</p>
+  </div>
+
+  <div id="conteudo" style="display:none;">
+    <div class="card-header-row" style="margin-top:0;">
+      <a href="admin.html" class="btn-secundario">&larr; Alunos</a>
+      <a href="admin-mural.html" class="btn-secundario">Mural</a>
+      <a href="ranking.html" class="btn-secundario">Ver ranking</a>
+    </div>
+
+    <div class="card">
+      <div class="card-header-row">
+        <h2>Fazer chamada</h2>
+        <span class="contador-badge" id="contadorPresentes">0</span>
+      </div>
+
+      <label for="chamada-data">Data da aula</label>
+      <input type="date" id="chamada-data">
+
+      <label for="chamada-busca">Buscar aluno</label>
+      <input type="text" id="chamada-busca" placeholder="Nome do aluno...">
+
+      <div id="lista-chamada" style="margin-top:20px;">
+        <p style="color:var(--text-dim);">Carregando...</p>
+      </div>
+
+      <button type="button" class="btn" id="btn-salvar-chamada">Salvar chamada</button>
+      <div class="msg" id="msg-chamada"></div>
+    </div>
+  </div>
+</main>
+
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script src="firebase-init.js"></script>
+<script>
+const btnSair = document.getElementById("btn-sair");
+const cardNegado = document.getElementById("card-negado");
+const conteudo = document.getElementById("conteudo");
+const inputData = document.getElementById("chamada-data");
+const inputBusca = document.getElementById("chamada-busca");
+const listaChamada = document.getElementById("lista-chamada");
+const contadorPresentes = document.getElementById("contadorPresentes");
+const btnSalvarChamada = document.getElementById("btn-salvar-chamada");
+const msgChamada = document.getElementById("msg-chamada");
+
+btnSair.addEventListener("click", () => auth.signOut().then(() => window.location.href = "login.html"));
+
+let todosAlunos = [];
+let presentesCarregados = new Set(); // ids que já têm presença salva na data atual
+
+function hojeISO() {
+  const hoje = new Date();
+  const semFuso = new Date(hoje.getTime() - hoje.getTimezoneOffset() * 60000);
+  return semFuso.toISOString().slice(0, 10);
+}
+
+async function carregarAlunosSeNecessario() {
+  if (todosAlunos.length) return;
+  const snap = await db.collection("alunos").orderBy("nomeCompleto").get();
+  todosAlunos = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+}
+
+// Nome/faixa vêm do cadastro do próprio aluno — nunca usar innerHTML pra
+// exibir, sempre createElement/textContent.
+function renderizarLista() {
+  const busca = inputBusca.value.trim().toLowerCase();
+  const lista = todosAlunos.filter((a) => !busca || a.nomeCompleto.toLowerCase().includes(busca));
+
+  listaChamada.innerHTML = "";
+
+  if (lista.length === 0) {
+    const p = document.createElement("p");
+    p.style.color = "var(--text-dim)";
+    p.textContent = "Nenhum aluno encontrado.";
+    listaChamada.appendChild(p);
+    atualizarContador();
+    return;
+  }
+
+  lista.forEach((aluno) => {
+    const item = document.createElement("div");
+    item.className = "chamada-item";
+
+    const check = document.createElement("input");
+    check.type = "checkbox";
+    check.dataset.alunoId = aluno.id;
+    check.checked = presentesCarregados.has(aluno.id);
+    check.addEventListener("change", atualizarContador);
+
+    const nome = document.createElement("span");
+    nome.className = "chamada-nome";
+    nome.textContent = aluno.nomeCompleto;
+
+    const belt = document.createElement("span");
+    belt.className = "belt-tag";
+    belt.textContent = aluno.faixa;
+
+    item.append(check, nome, belt);
+    listaChamada.appendChild(item);
+  });
+
+  atualizarContador();
+}
+
+function atualizarContador() {
+  contadorPresentes.textContent = listaChamada.querySelectorAll("input[type=checkbox]:checked").length;
+}
+
+function formatarData(iso) {
+  const [ano, mes, dia] = iso.split("-");
+  return dia + "/" + mes + "/" + ano;
+}
+
+async function carregarChamada(data) {
+  listaChamada.innerHTML = "";
+  const p = document.createElement("p");
+  p.style.color = "var(--text-dim)";
+  p.textContent = "Carregando...";
+  listaChamada.appendChild(p);
+  msgChamada.className = "msg";
+
+  await carregarAlunosSeNecessario();
+  const snap = await db.collection("presencas").where("data", "==", data).get();
+  presentesCarregados = new Set(snap.docs.map((doc) => doc.data().alunoId));
+  renderizarLista();
+}
+
+inputData.addEventListener("change", () => carregarChamada(inputData.value));
+inputBusca.addEventListener("input", renderizarLista);
+
+btnSalvarChamada.addEventListener("click", async () => {
+  const data = inputData.value;
+  if (!data) return;
+
+  const marcadosAgora = new Set();
+  listaChamada.querySelectorAll("input[type=checkbox]:checked").forEach((cb) => marcadosAgora.add(cb.dataset.alunoId));
+
+  const paraAdicionar = [...marcadosAgora].filter((id) => !presentesCarregados.has(id));
+  const paraRemover = [...presentesCarregados].filter((id) => !marcadosAgora.has(id));
+
+  if (paraAdicionar.length === 0 && paraRemover.length === 0) {
+    msgChamada.textContent = "Nenhuma alteração pra salvar.";
+    msgChamada.className = "msg show info";
+    return;
+  }
+
+  btnSalvarChamada.disabled = true;
+  btnSalvarChamada.textContent = "Salvando...";
+
+  try {
+    const batch = db.batch();
+    const alunosPorId = Object.fromEntries(todosAlunos.map((a) => [a.id, a]));
+
+    paraAdicionar.forEach((alunoId) => {
+      const aluno = alunosPorId[alunoId];
+      batch.set(db.collection("presencas").doc(alunoId + "_" + data), {
+        alunoId,
+        data,
+        criadoEm: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      batch.update(db.collection("alunos").doc(alunoId), {
+        totalPresencas: firebase.firestore.FieldValue.increment(1)
+      });
+      batch.set(db.collection("ranking").doc(alunoId), {
+        primeiroNome: aluno.nomeCompleto.split(" ")[0],
+        faixa: aluno.faixa,
+        totalPresencas: firebase.firestore.FieldValue.increment(1)
+      }, { merge: true });
+    });
+
+    paraRemover.forEach((alunoId) => {
+      batch.delete(db.collection("presencas").doc(alunoId + "_" + data));
+      batch.update(db.collection("alunos").doc(alunoId), {
+        totalPresencas: firebase.firestore.FieldValue.increment(-1)
+      });
+      batch.set(db.collection("ranking").doc(alunoId), {
+        totalPresencas: firebase.firestore.FieldValue.increment(-1)
+      }, { merge: true });
+    });
+
+    await batch.commit();
+    presentesCarregados = marcadosAgora;
+    msgChamada.textContent = marcadosAgora.size + " presença(s) confirmada(s) para " + formatarData(data) + ".";
+    msgChamada.className = "msg show success";
+  } catch (err) {
+    msgChamada.textContent = "Não foi possível salvar a chamada. Tente novamente.";
+    msgChamada.className = "msg show error";
+  } finally {
+    btnSalvarChamada.disabled = false;
+    btnSalvarChamada.textContent = "Salvar chamada";
+  }
+});
+
+auth.onAuthStateChanged(async (user) => {
+  if (!user) {
+    window.location.href = "login.html";
+    return;
+  }
+
+  const adminDoc = await db.collection("admins").doc(user.uid).get();
+  if (!adminDoc.exists) {
+    cardNegado.style.display = "block";
+    return;
+  }
+
+  conteudo.style.display = "block";
+  inputData.value = hojeISO();
+  carregarChamada(inputData.value);
+});
+</script>
+</body>
+</html>
