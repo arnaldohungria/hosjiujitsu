@@ -67,6 +67,18 @@
             <option value="maior">Maiores de 18</option>
           </select>
         </div>
+        <div class="filtro-campo">
+          <label for="filtro-graus">Graus</label>
+          <select id="filtro-graus">
+            <option value="">Todos</option>
+            <option value="0">0 grau</option>
+            <option value="1">1 grau</option>
+            <option value="2">2 graus</option>
+            <option value="3">3 graus</option>
+            <option value="4">4 graus</option>
+            <option value="nenhum">Não informado</option>
+          </select>
+        </div>
       </div>
 
       <div style="overflow-x:auto;">
@@ -111,6 +123,7 @@ const relatorioImpressao = document.getElementById("relatorio-impressao");
 const filtroNome = document.getElementById("filtro-nome");
 const filtroFaixa = document.getElementById("filtro-faixa");
 const filtroIdade = document.getElementById("filtro-idade");
+const filtroGraus = document.getElementById("filtro-graus");
 
 let alunosCache = [];
 let alunosFiltrados = [];
@@ -121,6 +134,7 @@ btnRelatorio.addEventListener("click", gerarRelatorio);
 filtroNome.addEventListener("input", aplicarFiltros);
 filtroFaixa.addEventListener("change", aplicarFiltros);
 filtroIdade.addEventListener("change", aplicarFiltros);
+filtroGraus.addEventListener("change", aplicarFiltros);
 
 auth.onAuthStateChanged(async (user) => {
   if (!user) {
@@ -159,6 +173,7 @@ function aplicarFiltros() {
   const nome = filtroNome.value.trim().toLowerCase();
   const faixa = filtroFaixa.value;
   const idade = filtroIdade.value;
+  const graus = filtroGraus.value;
 
   alunosFiltrados = alunosCache.filter((aluno) => {
     if (nome && !aluno.nomeCompleto.toLowerCase().includes(nome)) return false;
@@ -167,6 +182,11 @@ function aplicarFiltros() {
       const menorDeIdade = calcularIdade(aluno.dataNascimento) < 18;
       if (idade === "menor" && !menorDeIdade) return false;
       if (idade === "maior" && menorDeIdade) return false;
+    }
+    if (graus) {
+      const semGrau = aluno.graus === undefined || aluno.graus === null;
+      if (graus === "nenhum" && !semGrau) return false;
+      if (graus !== "nenhum" && (semGrau || String(aluno.graus) !== graus)) return false;
     }
     return true;
   });
@@ -443,6 +463,7 @@ function gerarRelatorio() {
     if (filtroNome.value.trim()) filtrosAtivos.push('Nome: "' + filtroNome.value.trim() + '"');
     if (filtroFaixa.value) filtrosAtivos.push("Faixa: " + filtroFaixa.value);
     if (filtroIdade.value) filtrosAtivos.push(filtroIdade.value === "menor" ? "Menores de 18" : "Maiores de 18");
+    if (filtroGraus.value) filtrosAtivos.push(filtroGraus.value === "nenhum" ? "Graus: não informado" : "Graus: " + filtroGraus.value);
 
     const p = document.createElement("p");
     p.textContent = "Gerado em " + new Date().toLocaleDateString("pt-BR")
