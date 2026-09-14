@@ -29,6 +29,7 @@
   </nav>
 
   <div class="card" id="card-visualizacao">
+    <div class="avatar-wrap" id="avatar-visualizacao"></div>
     <div class="card-header-row">
       <h2>Dados do aluno</h2>
       <button type="button" class="btn-secundario" id="btn-editar">Editar dados</button>
@@ -43,6 +44,15 @@
   <div class="card" id="card-edicao" style="display:none;">
     <h2>Editar dados</h2>
     <form id="form-editar">
+      <div class="avatar-edit-row">
+        <div id="avatar-preview"></div>
+        <div style="flex:1;">
+          <label for="edit-foto" style="margin-top:0;">Foto do aluno</label>
+          <input type="file" id="edit-foto" accept="image/*">
+          <p class="field-hint">Opcional. JPG ou PNG, até 5MB.</p>
+        </div>
+      </div>
+
       <p class="form-section-title">Dados do aluno</p>
 
       <label for="edit-nomeCompleto">Nome completo</label>
@@ -119,6 +129,9 @@ const btnSair = document.getElementById("btn-sair");
 const saudacao = document.getElementById("saudacao");
 const perfilAluno = document.getElementById("perfil-aluno");
 const perfilResponsavel = document.getElementById("perfil-responsavel");
+const avatarVisualizacao = document.getElementById("avatar-visualizacao");
+const avatarPreview = document.getElementById("avatar-preview");
+const inputFoto = document.getElementById("edit-foto");
 
 const cardVisualizacao = document.getElementById("card-visualizacao");
 const cardEdicao = document.getElementById("card-edicao");
@@ -159,6 +172,50 @@ function formatarData(iso) {
   return dia + "/" + mes + "/" + ano;
 }
 
+// Foto é opcional — se não tiver fotoBase64, mostra um círculo com a inicial
+// do nome no lugar (nunca innerHTML com dado livre, mesmo sendo só uma letra).
+function renderizarAvatar(container, aluno) {
+  container.innerHTML = "";
+  if (aluno.fotoBase64) {
+    const img = document.createElement("img");
+    img.className = "avatar";
+    img.src = aluno.fotoBase64;
+    img.alt = "Foto de " + aluno.nomeCompleto;
+    container.appendChild(img);
+  } else {
+    const placeholder = document.createElement("div");
+    placeholder.className = "avatar-placeholder";
+    placeholder.textContent = (aluno.nomeCompleto || "?").trim().charAt(0).toUpperCase();
+    container.appendChild(placeholder);
+  }
+}
+
+// Sem Firebase Storage (exigiria plano Blaze) — a foto é recortada em
+// quadrado, reduzida e comprimida em JPEG aqui mesmo no navegador, e o
+// resultado (uma data URL) é guardado direto no campo fotoBase64 do aluno.
+function comprimirImagem(arquivo, tamanho, qualidade) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(arquivo);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const lado = Math.min(img.width, img.height);
+      const sx = (img.width - lado) / 2;
+      const sy = (img.height - lado) / 2;
+      const canvas = document.createElement("canvas");
+      canvas.width = tamanho;
+      canvas.height = tamanho;
+      canvas.getContext("2d").drawImage(img, sx, sy, lado, lado, 0, 0, tamanho, tamanho);
+      resolve(canvas.toDataURL("image/jpeg", qualidade));
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("Não foi possível processar a imagem."));
+    };
+    img.src = url;
+  });
+}
+
 function formatarGraus(graus) {
   if (graus === undefined || graus === null) return "-";
   return graus + (graus === 1 ? " grau" : " graus");
@@ -189,6 +246,8 @@ function atualizarObrigatoriedadeResponsavel() {
 inputNascimento.addEventListener("change", atualizarObrigatoriedadeResponsavel);
 
 function renderizarVisualizacao(aluno) {
+  renderizarAvatar(avatarVisualizacao, aluno);
+
   perfilAluno.innerHTML = "";
   linha(perfilAluno, "Nome completo", aluno.nomeCompleto);
   linha(perfilAluno, "Data de nascimento", formatarData(aluno.dataNascimento));
@@ -219,6 +278,10 @@ function renderizarVisualizacao(aluno) {
 }
 
 function preencherFormularioEdicao(aluno) {
+  renderizarAvatar(avatarPreview, aluno);
+  inputFoto.value = "";
+  fotoBase64Selecionada = null;
+
   document.getElementById("edit-nomeCompleto").value = aluno.nomeCompleto || "";
   document.getElementById("edit-dataNascimento").value = aluno.dataNascimento || "";
   document.getElementById("edit-documentoAluno").value = aluno.documentoAluno || "";
@@ -245,8 +308,27 @@ btnCancelar.addEventListener("click", () => {
   cardVisualizacao.style.display = "block";
 });
 
+let fotoBase64Selecionada = null;
+
+inputFoto.addEventListener("change", async () => {
+  const arquivo = inputFoto.files[0];
+  if (!arquivo) return;
+  try {
+    fotoBase64Selecionada = await comprimirImagem(arquivo, 240, 0.75);
+    avatarPreview.innerHTML = "";
+    const img = document.createElement("img");
+    img.className = "avatar";
+    img.src = fotoBase64Selecionada;
+    avatarPreview.appendChild(img);
+  } catch (err) {
+    msgEdicao.textContent = "Não foi possível processar essa imagem. Tente outra.";
+    msgEdicao.className = "msg show error";
+  }
+});
+
 formEditar.addEventListener("submit", async (e) => {
   e.preventDefault();
+
   btnSalvar.disabled = true;
   btnSalvar.textContent = "Salvando...";
 
@@ -268,6 +350,8 @@ formEditar.addEventListener("submit", async (e) => {
 
   const pesoValue = document.getElementById("edit-peso").value;
   if (pesoValue !== "") dadosAtualizados.peso = parseFloat(pesoValue);
+
+  if (fotoBase64Selecionada) dadosAtualizados.fotoBase64 = fotoBase64Selecionada;
 
   try {
     await db.collection("alunos").doc(auth.currentUser.uid).update(dadosAtualizados);

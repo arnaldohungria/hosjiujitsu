@@ -211,6 +211,28 @@ table.admin-table tr:hover td{background:var(--bg-alt); cursor:pointer;}
 .ranking-count .rotulo{font-size:.68rem; color:var(--text-dim); font-weight:400; display:block; text-transform:uppercase; letter-spacing:.05em;}
 .ranking-sua-posicao{margin-top:20px; padding-top:16px; border-top:2px solid var(--line);}
 
+.avatar, .avatar-placeholder{
+  width:88px; height:88px; border-radius:50%; border:2px solid var(--line); flex-shrink:0;
+}
+.avatar{object-fit:cover; display:block; background:var(--bg-alt);}
+.avatar-placeholder{
+  background:var(--purple-light); color:#fff; display:flex; align-items:center; justify-content:center;
+  font-family:var(--display); font-size:2.2rem;
+}
+.avatar-wrap{display:flex; justify-content:center; margin-bottom:24px;}
+.avatar-edit-row{display:flex; align-items:center; gap:16px; margin-bottom:20px;}
+.avatar-edit-row .avatar, .avatar-edit-row .avatar-placeholder{width:64px; height:64px; font-size:1.6rem;}
+.avatar-edit-row input[type=file]{width:auto; padding:0; border:none;}
+
+.avatar-sm, .avatar-placeholder-sm{
+  width:36px; height:36px; border-radius:50%; border:1px solid var(--line); flex-shrink:0;
+}
+.avatar-sm{object-fit:cover; display:block; background:var(--bg-alt);}
+.avatar-placeholder-sm{
+  background:var(--purple-light); color:#fff; display:flex; align-items:center; justify-content:center;
+  font-family:var(--display); font-size:.95rem;
+}
+
 .only-print{display:none;}
 
 @media print{

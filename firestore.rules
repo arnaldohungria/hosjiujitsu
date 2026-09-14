@@ -41,6 +41,12 @@ service cloud.firestore {
         && (!('peso' in dados) || (dados.peso is number && dados.peso > 0 && dados.peso < 300))
         && (!('graus' in dados) || (dados.graus is int && dados.graus >= 0 && dados.graus <= 4))
         && (!('totalPresencas' in dados) || (dados.totalPresencas is int && dados.totalPresencas >= 0))
+        // fotoBase64 é a foto do aluno já comprimida no navegador (recorte quadrado
+        // + JPEG em baixa qualidade, ~240x240) e guardada como data URL direto no
+        // Firestore — sem Firebase Storage, que exigiria upgrade pro plano Blaze
+        // (política do Google desde out/2024 pra projetos sem Storage configurado
+        // antes). Limite de 400KB de string é bem folgado pro tamanho real gerado.
+        && (!('fotoBase64' in dados) || (dados.fotoBase64 is string && dados.fotoBase64.size() < 400000))
         && (!alunoMenorDeIdade(dados.dataNascimento) || (
           dados.nomeResponsavel.size() > 0
           && dados.documentoResponsavel.size() > 0

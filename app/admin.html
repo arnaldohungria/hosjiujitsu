@@ -85,10 +85,10 @@
       <div style="overflow-x:auto;">
         <table class="admin-table" id="tabela-alunos">
           <thead>
-            <tr><th>Nome</th><th>Faixa</th><th>Graus</th><th>Nascimento</th><th>Telefone aluno</th><th>Responsável</th></tr>
+            <tr><th></th><th>Nome</th><th>Faixa</th><th>Graus</th><th>Nascimento</th><th>Telefone aluno</th><th>Responsável</th></tr>
           </thead>
           <tbody>
-            <tr><td colspan="6">Carregando...</td></tr>
+            <tr><td colspan="7">Carregando...</td></tr>
           </tbody>
         </table>
       </div>
@@ -200,9 +200,53 @@ function formatarGraus(graus) {
   return String(graus);
 }
 
+// Foto é opcional — se não tiver fotoBase64, mostra um círculo com a inicial
+// do nome no lugar (nunca innerHTML com dado livre, mesmo sendo só uma letra).
+function renderizarAvatar(container, aluno, pequeno) {
+  container.innerHTML = "";
+  if (aluno.fotoBase64) {
+    const img = document.createElement("img");
+    img.className = pequeno ? "avatar-sm" : "avatar";
+    img.src = aluno.fotoBase64;
+    img.alt = "Foto de " + aluno.nomeCompleto;
+    container.appendChild(img);
+  } else {
+    const placeholder = document.createElement("div");
+    placeholder.className = pequeno ? "avatar-placeholder-sm" : "avatar-placeholder";
+    placeholder.textContent = (aluno.nomeCompleto || "?").trim().charAt(0).toUpperCase();
+    container.appendChild(placeholder);
+  }
+}
+
+// Sem Firebase Storage (exigiria plano Blaze) — a foto é recortada em
+// quadrado, reduzida e comprimida em JPEG aqui mesmo no navegador, e o
+// resultado (uma data URL) é guardado direto no campo fotoBase64 do aluno.
+function comprimirImagem(arquivo, tamanho, qualidade) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(arquivo);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const lado = Math.min(img.width, img.height);
+      const sx = (img.width - lado) / 2;
+      const sy = (img.height - lado) / 2;
+      const canvas = document.createElement("canvas");
+      canvas.width = tamanho;
+      canvas.height = tamanho;
+      canvas.getContext("2d").drawImage(img, sx, sy, lado, lado, 0, 0, tamanho, tamanho);
+      resolve(canvas.toDataURL("image/jpeg", qualidade));
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("Não foi possível processar a imagem."));
+    };
+    img.src = url;
+  });
+}
+
 function renderizarTabela(lista) {
   if (lista.length === 0) {
-    tabelaAlunos.innerHTML = "<tr><td colspan='6'>Nenhum aluno encontrado.</td></tr>";
+    tabelaAlunos.innerHTML = "<tr><td colspan='7'>Nenhum aluno encontrado.</td></tr>";
     return;
   }
 
@@ -210,6 +254,9 @@ function renderizarTabela(lista) {
 
   lista.forEach((aluno) => {
     const tr = document.createElement("tr");
+
+    const tdFoto = document.createElement("td");
+    renderizarAvatar(tdFoto, aluno, true);
 
     const tdNome = document.createElement("td");
     tdNome.textContent = aluno.nomeCompleto;
@@ -232,7 +279,7 @@ function renderizarTabela(lista) {
     const tdResponsavel = document.createElement("td");
     tdResponsavel.textContent = aluno.nomeResponsavel || "-";
 
-    tr.append(tdNome, tdFaixa, tdGraus, tdNascimento, tdTelefoneAluno, tdResponsavel);
+    tr.append(tdFoto, tdNome, tdFaixa, tdGraus, tdNascimento, tdTelefoneAluno, tdResponsavel);
     tr.addEventListener("click", () => abrirDetalhes(aluno));
 
     tabelaAlunos.appendChild(tr);
@@ -255,6 +302,11 @@ function linha(container, label, valor) {
 function abrirDetalhes(aluno) {
   modalTitulo.textContent = aluno.nomeCompleto;
   modalCorpo.innerHTML = "";
+
+  const avatarWrap = document.createElement("div");
+  avatarWrap.className = "avatar-wrap";
+  renderizarAvatar(avatarWrap, aluno);
+  modalCorpo.appendChild(avatarWrap);
 
   linha(modalCorpo, "Data de nascimento", formatarData(aluno.dataNascimento));
   linha(modalCorpo, "RG ou CPF", aluno.documentoAluno || "-");
@@ -319,6 +371,43 @@ function abrirEdicao(aluno) {
 
   const form = document.createElement("form");
   form.id = "form-editar-aluno";
+
+  const avatarEditRow = document.createElement("div");
+  avatarEditRow.className = "avatar-edit-row";
+  const avatarPreview = document.createElement("div");
+  renderizarAvatar(avatarPreview, aluno);
+  const avatarCampo = document.createElement("div");
+  avatarCampo.style.flex = "1";
+  const lblFoto = document.createElement("label");
+  lblFoto.setAttribute("for", "edit-foto");
+  lblFoto.style.marginTop = "0";
+  lblFoto.textContent = "Foto do aluno";
+  const inputFoto = document.createElement("input");
+  inputFoto.type = "file";
+  inputFoto.id = "edit-foto";
+  inputFoto.accept = "image/*";
+  const hintFoto = document.createElement("p");
+  hintFoto.className = "field-hint";
+  hintFoto.textContent = "Opcional. JPG ou PNG.";
+  let fotoBase64Selecionada = null;
+  inputFoto.addEventListener("change", async () => {
+    const arquivo = inputFoto.files[0];
+    if (!arquivo) return;
+    try {
+      fotoBase64Selecionada = await comprimirImagem(arquivo, 240, 0.75);
+      avatarPreview.innerHTML = "";
+      const img = document.createElement("img");
+      img.className = "avatar";
+      img.src = fotoBase64Selecionada;
+      avatarPreview.appendChild(img);
+    } catch (err) {
+      msgEdicao.textContent = "Não foi possível processar essa imagem. Tente outra.";
+      msgEdicao.className = "msg show error";
+    }
+  });
+  avatarCampo.append(lblFoto, inputFoto, hintFoto);
+  avatarEditRow.append(avatarPreview, avatarCampo);
+  form.appendChild(avatarEditRow);
 
   const tituloAluno = document.createElement("p");
   tituloAluno.className = "form-section-title";
@@ -426,6 +515,7 @@ function abrirEdicao(aluno) {
 
     if (selectGraus.value !== "") dadosAtualizados.graus = parseInt(selectGraus.value, 10);
     if (inputPeso.value.trim() !== "") dadosAtualizados.peso = parseFloat(inputPeso.value);
+    if (fotoBase64Selecionada) dadosAtualizados.fotoBase64 = fotoBase64Selecionada;
 
     try {
       await db.collection("alunos").doc(aluno.id).update(dadosAtualizados);
