@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Meu Perfil - HOS Jiu-Jitsu</title>
+<title>Meus Dados - HOS Jiu-Jitsu</title>
 <link rel="icon" type="image/png" href="../assets/logo.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -22,20 +22,90 @@
 
 <main class="app-main">
   <nav class="app-nav">
+    <a href="mural.html">Mural</a>
     <a href="perfil.html" class="active">Meus Dados</a>
     <a href="conteudos.html">Conteúdos</a>
   </nav>
 
-  <div class="card">
-    <h2>Dados do aluno</h2>
+  <div class="card" id="card-visualizacao">
+    <div class="card-header-row">
+      <h2>Dados do aluno</h2>
+      <button type="button" class="btn-secundario" id="btn-editar">Editar dados</button>
+    </div>
     <div id="perfil-aluno">
       <p style="color:var(--text-dim);">Carregando...</p>
     </div>
+    <h2 style="margin-top:28px;">Dados do responsável</h2>
+    <div id="perfil-responsavel"></div>
   </div>
 
-  <div class="card">
-    <h2>Dados do responsável</h2>
-    <div id="perfil-responsavel"></div>
+  <div class="card" id="card-edicao" style="display:none;">
+    <h2>Editar dados</h2>
+    <form id="form-editar">
+      <p class="form-section-title">Dados do aluno</p>
+
+      <label for="edit-nomeCompleto">Nome completo</label>
+      <input type="text" id="edit-nomeCompleto" required>
+
+      <label for="edit-dataNascimento">Data de nascimento</label>
+      <input type="date" id="edit-dataNascimento" required>
+
+      <label for="edit-documentoAluno">RG ou CPF</label>
+      <input type="text" id="edit-documentoAluno">
+      <p class="field-hint">Opcional</p>
+
+      <label for="edit-telefoneAluno">Telefone</label>
+      <input type="tel" id="edit-telefoneAluno" placeholder="(15) 99999-9999">
+      <p class="field-hint">Opcional</p>
+
+      <label for="edit-faixa">Faixa</label>
+      <select id="edit-faixa" required>
+        <option value="Branca">Branca</option>
+        <option value="Cinza">Cinza (infantil)</option>
+        <option value="Amarela">Amarela (infantil)</option>
+        <option value="Laranja">Laranja (infantil)</option>
+        <option value="Verde">Verde (infantil)</option>
+        <option value="Azul">Azul</option>
+        <option value="Roxa">Roxa</option>
+        <option value="Marrom">Marrom</option>
+        <option value="Preta">Preta</option>
+      </select>
+
+      <label for="edit-graus">Graus</label>
+      <select id="edit-graus">
+        <option value="">Não informado</option>
+        <option value="0">0 grau</option>
+        <option value="1">1 grau</option>
+        <option value="2">2 graus</option>
+        <option value="3">3 graus</option>
+        <option value="4">4 graus</option>
+      </select>
+
+      <label for="edit-peso">Peso atual (kg)</label>
+      <input type="number" id="edit-peso" min="1" max="299" step="0.1" placeholder="Ex: 42.5">
+      <p class="field-hint">Opcional</p>
+
+      <p class="form-section-title">Dados do pai, mãe ou responsável</p>
+      <p class="field-hint">Caso seja maior de 18 anos, não precisa preencher nome, documento e telefone dos pais ou responsável — apenas o endereço continua obrigatório.</p>
+
+      <label for="edit-nomeResponsavel">Nome completo</label>
+      <input type="text" id="edit-nomeResponsavel">
+
+      <label for="edit-documentoResponsavel">RG ou CPF</label>
+      <input type="text" id="edit-documentoResponsavel">
+
+      <label for="edit-enderecoResponsavel">Endereço (rua e número)</label>
+      <input type="text" id="edit-enderecoResponsavel" required>
+
+      <label for="edit-telefoneResponsavel">Telefone</label>
+      <input type="tel" id="edit-telefoneResponsavel" placeholder="(15) 99999-9999">
+
+      <div class="modal-acoes">
+        <button type="submit" class="btn" id="btn-salvar">Salvar alterações</button>
+        <button type="button" class="btn-secundario" id="btn-cancelar">Cancelar</button>
+      </div>
+      <div class="msg" id="msg-edicao"></div>
+    </form>
   </div>
 </main>
 
@@ -48,6 +118,21 @@ const btnSair = document.getElementById("btn-sair");
 const saudacao = document.getElementById("saudacao");
 const perfilAluno = document.getElementById("perfil-aluno");
 const perfilResponsavel = document.getElementById("perfil-responsavel");
+
+const cardVisualizacao = document.getElementById("card-visualizacao");
+const cardEdicao = document.getElementById("card-edicao");
+const btnEditar = document.getElementById("btn-editar");
+const btnCancelar = document.getElementById("btn-cancelar");
+const formEditar = document.getElementById("form-editar");
+const btnSalvar = document.getElementById("btn-salvar");
+const msgEdicao = document.getElementById("msg-edicao");
+
+const inputNascimento = document.getElementById("edit-dataNascimento");
+const inputNomeResponsavel = document.getElementById("edit-nomeResponsavel");
+const inputDocumentoResponsavel = document.getElementById("edit-documentoResponsavel");
+const inputTelefoneResponsavel = document.getElementById("edit-telefoneResponsavel");
+
+let alunoAtual = null;
 
 btnSair.addEventListener("click", () => auth.signOut().then(() => window.location.href = "login.html"));
 
@@ -73,21 +158,36 @@ function formatarData(iso) {
   return dia + "/" + mes + "/" + ano;
 }
 
-auth.onAuthStateChanged(async (user) => {
-  if (!user) {
-    window.location.href = "login.html";
-    return;
-  }
+function formatarGraus(graus) {
+  if (graus === undefined || graus === null) return "-";
+  return graus + (graus === 1 ? " grau" : " graus");
+}
 
-  const doc = await db.collection("alunos").doc(user.uid).get();
-  if (!doc.exists) {
-    perfilAluno.textContent = "Cadastro não encontrado.";
-    return;
-  }
+function formatarPeso(peso) {
+  if (!peso) return "-";
+  return String(peso).replace(".", ",") + " kg";
+}
 
-  const aluno = doc.data();
-  saudacao.textContent = "Olá, " + aluno.nomeCompleto.split(" ")[0];
+function calcularIdade(dataISO) {
+  const hoje = new Date();
+  const nascimento = new Date(dataISO + "T00:00:00");
+  let idade = hoje.getFullYear() - nascimento.getFullYear();
+  const aindaNaoFezAniversario = (hoje.getMonth() < nascimento.getMonth())
+    || (hoje.getMonth() === nascimento.getMonth() && hoje.getDate() < nascimento.getDate());
+  if (aindaNaoFezAniversario) idade--;
+  return idade;
+}
 
+function atualizarObrigatoriedadeResponsavel() {
+  if (!inputNascimento.value) return;
+  const maiorDeIdade = calcularIdade(inputNascimento.value) >= 18;
+  inputNomeResponsavel.required = !maiorDeIdade;
+  inputDocumentoResponsavel.required = !maiorDeIdade;
+  inputTelefoneResponsavel.required = !maiorDeIdade;
+}
+inputNascimento.addEventListener("change", atualizarObrigatoriedadeResponsavel);
+
+function renderizarVisualizacao(aluno) {
   perfilAluno.innerHTML = "";
   linha(perfilAluno, "Nome completo", aluno.nomeCompleto);
   linha(perfilAluno, "Data de nascimento", formatarData(aluno.dataNascimento));
@@ -105,6 +205,8 @@ auth.onAuthStateChanged(async (user) => {
   rowFaixa.append(labelFaixa, beltTag);
   perfilAluno.appendChild(rowFaixa);
 
+  linha(perfilAluno, "Graus", formatarGraus(aluno.graus));
+  linha(perfilAluno, "Peso atual", formatarPeso(aluno.peso));
   linha(perfilAluno, "E-mail", aluno.email);
 
   perfilResponsavel.innerHTML = "";
@@ -112,6 +214,89 @@ auth.onAuthStateChanged(async (user) => {
   linha(perfilResponsavel, "RG ou CPF", aluno.documentoResponsavel || "-");
   linha(perfilResponsavel, "Endereço", aluno.enderecoResponsavel);
   linha(perfilResponsavel, "Telefone", aluno.telefoneResponsavel || "-");
+}
+
+function preencherFormularioEdicao(aluno) {
+  document.getElementById("edit-nomeCompleto").value = aluno.nomeCompleto || "";
+  document.getElementById("edit-dataNascimento").value = aluno.dataNascimento || "";
+  document.getElementById("edit-documentoAluno").value = aluno.documentoAluno || "";
+  document.getElementById("edit-telefoneAluno").value = aluno.telefoneAluno || "";
+  document.getElementById("edit-faixa").value = aluno.faixa || "Branca";
+  document.getElementById("edit-graus").value = (aluno.graus === undefined || aluno.graus === null) ? "" : aluno.graus;
+  document.getElementById("edit-peso").value = aluno.peso || "";
+  document.getElementById("edit-nomeResponsavel").value = aluno.nomeResponsavel || "";
+  document.getElementById("edit-documentoResponsavel").value = aluno.documentoResponsavel || "";
+  document.getElementById("edit-enderecoResponsavel").value = aluno.enderecoResponsavel || "";
+  document.getElementById("edit-telefoneResponsavel").value = aluno.telefoneResponsavel || "";
+  atualizarObrigatoriedadeResponsavel();
+  msgEdicao.className = "msg";
+}
+
+btnEditar.addEventListener("click", () => {
+  preencherFormularioEdicao(alunoAtual);
+  cardVisualizacao.style.display = "none";
+  cardEdicao.style.display = "block";
+});
+
+btnCancelar.addEventListener("click", () => {
+  cardEdicao.style.display = "none";
+  cardVisualizacao.style.display = "block";
+});
+
+formEditar.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  btnSalvar.disabled = true;
+  btnSalvar.textContent = "Salvando...";
+
+  const dadosAtualizados = {
+    nomeCompleto: document.getElementById("edit-nomeCompleto").value.trim(),
+    dataNascimento: document.getElementById("edit-dataNascimento").value,
+    documentoAluno: document.getElementById("edit-documentoAluno").value.trim(),
+    telefoneAluno: document.getElementById("edit-telefoneAluno").value.trim(),
+    faixa: document.getElementById("edit-faixa").value,
+    nomeResponsavel: document.getElementById("edit-nomeResponsavel").value.trim(),
+    documentoResponsavel: document.getElementById("edit-documentoResponsavel").value.trim(),
+    enderecoResponsavel: document.getElementById("edit-enderecoResponsavel").value.trim(),
+    telefoneResponsavel: document.getElementById("edit-telefoneResponsavel").value.trim(),
+    email: alunoAtual.email
+  };
+
+  const grausValue = document.getElementById("edit-graus").value;
+  if (grausValue !== "") dadosAtualizados.graus = parseInt(grausValue, 10);
+
+  const pesoValue = document.getElementById("edit-peso").value;
+  if (pesoValue !== "") dadosAtualizados.peso = parseFloat(pesoValue);
+
+  try {
+    await db.collection("alunos").doc(auth.currentUser.uid).update(dadosAtualizados);
+    alunoAtual = { ...alunoAtual, ...dadosAtualizados };
+    renderizarVisualizacao(alunoAtual);
+    cardEdicao.style.display = "none";
+    cardVisualizacao.style.display = "block";
+  } catch (err) {
+    msgEdicao.textContent = "Não foi possível salvar. Confira os campos obrigatórios.";
+    msgEdicao.className = "msg show error";
+  } finally {
+    btnSalvar.disabled = false;
+    btnSalvar.textContent = "Salvar alterações";
+  }
+});
+
+auth.onAuthStateChanged(async (user) => {
+  if (!user) {
+    window.location.href = "login.html";
+    return;
+  }
+
+  const doc = await db.collection("alunos").doc(user.uid).get();
+  if (!doc.exists) {
+    perfilAluno.textContent = "Cadastro não encontrado.";
+    return;
+  }
+
+  alunoAtual = doc.data();
+  saudacao.textContent = "Olá, " + alunoAtual.nomeCompleto.split(" ")[0];
+  renderizarVisualizacao(alunoAtual);
 });
 </script>
 </body>

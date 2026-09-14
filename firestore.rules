@@ -24,6 +24,9 @@ service cloud.firestore {
     // existe no documento (string vazia se não preenchido). Os dados do responsável
     // (nome, documento, telefone) só são obrigatórios se o aluno for menor de idade;
     // o endereço do responsável continua obrigatório em qualquer caso.
+    // peso e graus não existem no cadastro inicial (só aparecem depois, via edição
+    // de dados) — por isso são opcionais de verdade: só são validados se a chave
+    // existir no documento, nunca exigidos.
     function dadosAlunoValidos(dados) {
       return dados.nomeCompleto is string && dados.nomeCompleto.size() > 0 && dados.nomeCompleto.size() < 100
         && dados.dataNascimento is string && dados.dataNascimento.size() > 0
@@ -35,6 +38,8 @@ service cloud.firestore {
         && dados.enderecoResponsavel is string && dados.enderecoResponsavel.size() > 0 && dados.enderecoResponsavel.size() < 150
         && dados.telefoneResponsavel is string && dados.telefoneResponsavel.size() < 30
         && dados.email is string && dados.email.size() < 100
+        && (!('peso' in dados) || (dados.peso is number && dados.peso > 0 && dados.peso < 300))
+        && (!('graus' in dados) || (dados.graus is int && dados.graus >= 0 && dados.graus <= 4))
         && (!alunoMenorDeIdade(dados.dataNascimento) || (
           dados.nomeResponsavel.size() > 0
           && dados.documentoResponsavel.size() > 0
@@ -120,6 +125,23 @@ service cloud.firestore {
       allow list: if isAdmin();
       allow create: if doacaoValida(request.resource.data);
       allow update, delete: if false;
+    }
+
+    // ===== Mural de avisos (área do aluno) =====
+    // Só o professor (admin) publica/edita/apaga; qualquer usuário logado (aluno
+    // ou admin) pode ler. criadoEm só é exigido == request.time na criação — na
+    // edição o valor original passa intacto (não é reenviado como request.time).
+    function avisoCamposValidos(dados) {
+      return dados.titulo is string && dados.titulo.size() > 0 && dados.titulo.size() < 100
+        && dados.mensagem is string && dados.mensagem.size() > 0 && dados.mensagem.size() < 2000;
+    }
+
+    match /avisos/{avisoId} {
+      allow read: if isSignedIn();
+      allow create: if isAdmin() && avisoCamposValidos(request.resource.data)
+        && request.resource.data.criadoEm == request.time;
+      allow update: if isAdmin() && avisoCamposValidos(request.resource.data);
+      allow delete: if isAdmin();
     }
   }
 }

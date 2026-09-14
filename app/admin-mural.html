@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mural - Painel do Professor - HOS Jiu-Jitsu</title>
+<link rel="icon" type="image/png" href="../assets/logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+
+<header class="app-header">
+  <div class="logo-wrap">
+    <img src="../assets/logo.png" alt="Logo">
+    <h1>Mural &mdash; Painel do Professor</h1>
+  </div>
+  <span class="sair" id="btn-sair">Sair</span>
+</header>
+
+<main class="app-main wide">
+  <div class="card" id="card-negado" style="display:none;">
+    <h2>Acesso restrito</h2>
+    <p>Esta área é exclusiva para o professor.</p>
+  </div>
+
+  <div id="conteudo" style="display:none;">
+    <div class="card-header-row" style="margin-top:0;">
+      <a href="admin.html" class="btn-secundario">&larr; Alunos</a>
+      <a href="admin-rifa.html" class="btn-secundario">Rifa</a>
+      <a href="admin-doacoes.html" class="btn-secundario">Doações</a>
+    </div>
+
+    <div class="card">
+      <h2>Publicar novo aviso</h2>
+      <form id="form-novo-aviso">
+        <label for="novo-titulo">Título</label>
+        <input type="text" id="novo-titulo" maxlength="99" required>
+
+        <label for="novo-mensagem">Mensagem</label>
+        <textarea id="novo-mensagem" maxlength="1999" required></textarea>
+
+        <button type="submit" class="btn" id="btn-publicar">Publicar aviso</button>
+        <div class="msg" id="msg-novo"></div>
+      </form>
+    </div>
+
+    <div class="card">
+      <h2>Avisos publicados</h2>
+      <div id="lista-avisos">
+        <p style="color:var(--text-dim);">Carregando...</p>
+      </div>
+    </div>
+  </div>
+</main>
+
+<div class="modal-backdrop" id="modal-backdrop">
+  <div class="modal">
+    <span class="close" id="modal-close">&times;</span>
+    <h2>Editar aviso</h2>
+    <form id="form-editar-aviso">
+      <label for="edit-titulo">Título</label>
+      <input type="text" id="edit-titulo" maxlength="99" required>
+
+      <label for="edit-mensagem">Mensagem</label>
+      <textarea id="edit-mensagem" maxlength="1999" required></textarea>
+
+      <div class="modal-acoes">
+        <button type="submit" class="btn" id="btn-salvar-edicao">Salvar alterações</button>
+        <button type="button" class="btn-secundario" id="btn-cancelar-edicao">Cancelar</button>
+      </div>
+      <div class="msg" id="msg-edicao"></div>
+    </form>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script src="firebase-init.js"></script>
+<script>
+const btnSair = document.getElementById("btn-sair");
+const cardNegado = document.getElementById("card-negado");
+const conteudo = document.getElementById("conteudo");
+const listaAvisos = document.getElementById("lista-avisos");
+
+const formNovoAviso = document.getElementById("form-novo-aviso");
+const btnPublicar = document.getElementById("btn-publicar");
+const msgNovo = document.getElementById("msg-novo");
+
+const modalBackdrop = document.getElementById("modal-backdrop");
+const modalClose = document.getElementById("modal-close");
+const formEditarAviso = document.getElementById("form-editar-aviso");
+const btnSalvarEdicao = document.getElementById("btn-salvar-edicao");
+const btnCancelarEdicao = document.getElementById("btn-cancelar-edicao");
+const msgEdicao = document.getElementById("msg-edicao");
+
+let avisoEmEdicaoId = null;
+
+btnSair.addEventListener("click", () => auth.signOut().then(() => window.location.href = "login.html"));
+modalClose.addEventListener("click", fecharModal);
+btnCancelarEdicao.addEventListener("click", fecharModal);
+
+function fecharModal() {
+  modalBackdrop.classList.remove("show");
+  avisoEmEdicaoId = null;
+}
+
+auth.onAuthStateChanged(async (user) => {
+  if (!user) {
+    window.location.href = "login.html";
+    return;
+  }
+
+  const adminDoc = await db.collection("admins").doc(user.uid).get();
+  if (!adminDoc.exists) {
+    cardNegado.style.display = "block";
+    return;
+  }
+
+  conteudo.style.display = "block";
+  iniciarAvisos();
+});
+
+function formatarDataHora(date) {
+  return date.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" }) + " às " +
+    date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+}
+
+// Título/mensagem digitados pelo próprio professor, mas mesmo assim nunca usar
+// innerHTML pra exibir — sempre createElement/textContent.
+function renderizarAvisos(snap) {
+  if (snap.empty) {
+    listaAvisos.innerHTML = "";
+    const p = document.createElement("p");
+    p.style.color = "var(--text-dim)";
+    p.textContent = "Nenhum aviso publicado ainda.";
+    listaAvisos.appendChild(p);
+    return;
+  }
+
+  listaAvisos.innerHTML = "";
+  snap.forEach((doc) => {
+    const aviso = doc.data();
+    const item = document.createElement("div");
+    item.className = "aviso-admin-item";
+
+    const corpo = document.createElement("div");
+    corpo.className = "aviso-admin-corpo";
+
+    const titulo = document.createElement("h3");
+    titulo.textContent = aviso.titulo;
+
+    const data = document.createElement("span");
+    data.className = "aviso-data";
+    data.textContent = aviso.criadoEm ? formatarDataHora(aviso.criadoEm.toDate()) : "";
+
+    const mensagem = document.createElement("p");
+    mensagem.textContent = aviso.mensagem;
+
+    corpo.append(titulo, data, mensagem);
+
+    const acoes = document.createElement("div");
+    acoes.className = "aviso-admin-acoes";
+
+    const btnEditar = document.createElement("button");
+    btnEditar.type = "button";
+    btnEditar.className = "btn-texto";
+    btnEditar.textContent = "Editar";
+    btnEditar.addEventListener("click", () => abrirEdicao(doc.id, aviso));
+
+    const btnExcluir = document.createElement("button");
+    btnExcluir.type = "button";
+    btnExcluir.className = "btn-texto";
+    btnExcluir.style.color = "#b1195f";
+    btnExcluir.textContent = "Excluir";
+    btnExcluir.addEventListener("click", () => excluirAviso(doc.id, aviso.titulo));
+
+    acoes.append(btnEditar, btnExcluir);
+
+    item.append(corpo, acoes);
+    listaAvisos.appendChild(item);
+  });
+}
+
+function iniciarAvisos() {
+  db.collection("avisos").orderBy("criadoEm", "desc").onSnapshot(renderizarAvisos);
+}
+
+formNovoAviso.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const titulo = document.getElementById("novo-titulo").value.trim();
+  const mensagem = document.getElementById("novo-mensagem").value.trim();
+
+  btnPublicar.disabled = true;
+  btnPublicar.textContent = "Publicando...";
+
+  try {
+    await db.collection("avisos").add({
+      titulo,
+      mensagem,
+      criadoEm: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    formNovoAviso.reset();
+    msgNovo.className = "msg";
+  } catch (err) {
+    msgNovo.textContent = "Não foi possível publicar o aviso.";
+    msgNovo.className = "msg show error";
+  } finally {
+    btnPublicar.disabled = false;
+    btnPublicar.textContent = "Publicar aviso";
+  }
+});
+
+function abrirEdicao(id, aviso) {
+  avisoEmEdicaoId = id;
+  document.getElementById("edit-titulo").value = aviso.titulo;
+  document.getElementById("edit-mensagem").value = aviso.mensagem;
+  msgEdicao.className = "msg";
+  modalBackdrop.classList.add("show");
+}
+
+formEditarAviso.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  if (!avisoEmEdicaoId) return;
+
+  btnSalvarEdicao.disabled = true;
+  btnSalvarEdicao.textContent = "Salvando...";
+
+  try {
+    await db.collection("avisos").doc(avisoEmEdicaoId).update({
+      titulo: document.getElementById("edit-titulo").value.trim(),
+      mensagem: document.getElementById("edit-mensagem").value.trim()
+    });
+    fecharModal();
+  } catch (err) {
+    msgEdicao.textContent = "Não foi possível salvar as alterações.";
+    msgEdicao.className = "msg show error";
+  } finally {
+    btnSalvarEdicao.disabled = false;
+    btnSalvarEdicao.textContent = "Salvar alterações";
+  }
+});
+
+async function excluirAviso(id, titulo) {
+  if (!confirm("Excluir o aviso \"" + titulo + "\"? Essa ação não pode ser desfeita.")) return;
+  await db.collection("avisos").doc(id).delete();
+}
+</script>
+</body>
+</html>

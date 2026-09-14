@@ -167,7 +167,7 @@ form.addEventListener("submit", async (e) => {
       email,
       criadoEm: firebase.firestore.FieldValue.serverTimestamp()
     });
-    window.location.href = "perfil.html";
+    window.location.href = "mural.html";
   } catch (err) {
     let text = "Erro ao criar cadastro. Tente novamente.";
     if (err.code === "auth/email-already-in-use") text = "Este e-mail já está cadastrado.";

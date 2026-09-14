@@ -30,6 +30,7 @@
     <div class="card-header-row" style="margin-bottom:16px;">
       <a href="admin-rifa.html" class="btn-secundario">Rifa &rarr;</a>
       <a href="admin-doacoes.html" class="btn-secundario">Doações &rarr;</a>
+      <a href="admin-mural.html" class="btn-secundario">Mural &rarr;</a>
     </div>
 
     <div class="card">
@@ -37,13 +38,44 @@
         <h2>Alunos cadastrados <span class="contador-badge" id="contadorAlunos">0</span></h2>
         <button type="button" class="btn-secundario" id="btn-relatorio">Imprimir relatório</button>
       </div>
+
+      <div class="filtros-row">
+        <div class="filtro-campo">
+          <label for="filtro-nome">Buscar por nome</label>
+          <input type="text" id="filtro-nome" placeholder="Nome do aluno...">
+        </div>
+        <div class="filtro-campo">
+          <label for="filtro-faixa">Faixa</label>
+          <select id="filtro-faixa">
+            <option value="">Todas</option>
+            <option value="Branca">Branca</option>
+            <option value="Cinza">Cinza</option>
+            <option value="Amarela">Amarela</option>
+            <option value="Laranja">Laranja</option>
+            <option value="Verde">Verde</option>
+            <option value="Azul">Azul</option>
+            <option value="Roxa">Roxa</option>
+            <option value="Marrom">Marrom</option>
+            <option value="Preta">Preta</option>
+          </select>
+        </div>
+        <div class="filtro-campo">
+          <label for="filtro-idade">Idade</label>
+          <select id="filtro-idade">
+            <option value="">Todas</option>
+            <option value="menor">Menores de 18</option>
+            <option value="maior">Maiores de 18</option>
+          </select>
+        </div>
+      </div>
+
       <div style="overflow-x:auto;">
         <table class="admin-table" id="tabela-alunos">
           <thead>
-            <tr><th>Nome</th><th>Faixa</th><th>Nascimento</th><th>Telefone aluno</th><th>Responsável</th></tr>
+            <tr><th>Nome</th><th>Faixa</th><th>Graus</th><th>Nascimento</th><th>Telefone aluno</th><th>Responsável</th></tr>
           </thead>
           <tbody>
-            <tr><td colspan="5">Carregando...</td></tr>
+            <tr><td colspan="6">Carregando...</td></tr>
           </tbody>
         </table>
       </div>
@@ -76,12 +108,19 @@ const modalCorpo = document.getElementById("modal-corpo");
 const modalClose = document.getElementById("modal-close");
 const btnRelatorio = document.getElementById("btn-relatorio");
 const relatorioImpressao = document.getElementById("relatorio-impressao");
+const filtroNome = document.getElementById("filtro-nome");
+const filtroFaixa = document.getElementById("filtro-faixa");
+const filtroIdade = document.getElementById("filtro-idade");
 
 let alunosCache = [];
+let alunosFiltrados = [];
 
 btnSair.addEventListener("click", () => auth.signOut().then(() => window.location.href = "login.html"));
 modalClose.addEventListener("click", () => modalBackdrop.classList.remove("show"));
 btnRelatorio.addEventListener("click", gerarRelatorio);
+filtroNome.addEventListener("input", aplicarFiltros);
+filtroFaixa.addEventListener("change", aplicarFiltros);
+filtroIdade.addEventListener("change", aplicarFiltros);
 
 auth.onAuthStateChanged(async (user) => {
   if (!user) {
@@ -112,16 +151,43 @@ async function carregarAlunos() {
   const snap = await db.collection("alunos").orderBy("nomeCompleto").get();
 
   document.getElementById("contadorAlunos").textContent = snap.size;
+  alunosCache = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+  aplicarFiltros();
+}
 
-  if (snap.empty) {
-    tabelaAlunos.innerHTML = "<tr><td colspan='5'>Nenhum aluno cadastrado.</td></tr>";
+function aplicarFiltros() {
+  const nome = filtroNome.value.trim().toLowerCase();
+  const faixa = filtroFaixa.value;
+  const idade = filtroIdade.value;
+
+  alunosFiltrados = alunosCache.filter((aluno) => {
+    if (nome && !aluno.nomeCompleto.toLowerCase().includes(nome)) return false;
+    if (faixa && aluno.faixa !== faixa) return false;
+    if (idade) {
+      const menorDeIdade = calcularIdade(aluno.dataNascimento) < 18;
+      if (idade === "menor" && !menorDeIdade) return false;
+      if (idade === "maior" && menorDeIdade) return false;
+    }
+    return true;
+  });
+
+  renderizarTabela(alunosFiltrados);
+}
+
+function formatarGraus(graus) {
+  if (graus === undefined || graus === null) return "-";
+  return String(graus);
+}
+
+function renderizarTabela(lista) {
+  if (lista.length === 0) {
+    tabelaAlunos.innerHTML = "<tr><td colspan='6'>Nenhum aluno encontrado.</td></tr>";
     return;
   }
 
-  alunosCache = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
   tabelaAlunos.innerHTML = "";
 
-  alunosCache.forEach((aluno) => {
+  lista.forEach((aluno) => {
     const tr = document.createElement("tr");
 
     const tdNome = document.createElement("td");
@@ -133,6 +199,9 @@ async function carregarAlunos() {
     beltTag.textContent = aluno.faixa;
     tdFaixa.appendChild(beltTag);
 
+    const tdGraus = document.createElement("td");
+    tdGraus.textContent = formatarGraus(aluno.graus);
+
     const tdNascimento = document.createElement("td");
     tdNascimento.textContent = formatarData(aluno.dataNascimento);
 
@@ -142,7 +211,7 @@ async function carregarAlunos() {
     const tdResponsavel = document.createElement("td");
     tdResponsavel.textContent = aluno.nomeResponsavel || "-";
 
-    tr.append(tdNome, tdFaixa, tdNascimento, tdTelefoneAluno, tdResponsavel);
+    tr.append(tdNome, tdFaixa, tdGraus, tdNascimento, tdTelefoneAluno, tdResponsavel);
     tr.addEventListener("click", () => abrirDetalhes(aluno));
 
     tabelaAlunos.appendChild(tr);
@@ -170,6 +239,8 @@ function abrirDetalhes(aluno) {
   linha(modalCorpo, "RG ou CPF", aluno.documentoAluno || "-");
   linha(modalCorpo, "Telefone", aluno.telefoneAluno || "-");
   linha(modalCorpo, "Faixa", aluno.faixa);
+  linha(modalCorpo, "Graus", formatarGraus(aluno.graus));
+  linha(modalCorpo, "Peso atual", aluno.peso ? String(aluno.peso).replace(".", ",") + " kg" : "-");
   linha(modalCorpo, "E-mail", aluno.email);
   linha(modalCorpo, "Responsável", aluno.nomeResponsavel || "-");
   linha(modalCorpo, "RG ou CPF do responsável", aluno.documentoResponsavel || "-");
@@ -252,6 +323,26 @@ function abrirEdicao(aluno) {
   });
   form.append(lblFaixa, selectFaixa);
 
+  const lblGraus = document.createElement("label");
+  lblGraus.setAttribute("for", "edit-graus");
+  lblGraus.textContent = "Graus";
+  const selectGraus = document.createElement("select");
+  selectGraus.id = "edit-graus";
+  [["", "Não informado"], ["0", "0 grau"], ["1", "1 grau"], ["2", "2 graus"], ["3", "3 graus"], ["4", "4 graus"]].forEach(([valor, texto]) => {
+    const opt = document.createElement("option");
+    opt.value = valor;
+    opt.textContent = texto;
+    const atual = (aluno.graus === undefined || aluno.graus === null) ? "" : String(aluno.graus);
+    if (valor === atual) opt.selected = true;
+    selectGraus.appendChild(opt);
+  });
+  form.append(lblGraus, selectGraus);
+
+  const inputPeso = campo(form, "Peso atual (kg)", "edit-peso", aluno.peso, { type: "number" });
+  inputPeso.min = "1";
+  inputPeso.max = "299";
+  inputPeso.step = "0.1";
+
   const tituloResp = document.createElement("p");
   tituloResp.className = "form-section-title";
   tituloResp.textContent = "Dados do pai, mãe ou responsável";
@@ -312,6 +403,9 @@ function abrirEdicao(aluno) {
       email: aluno.email
     };
 
+    if (selectGraus.value !== "") dadosAtualizados.graus = parseInt(selectGraus.value, 10);
+    if (inputPeso.value.trim() !== "") dadosAtualizados.peso = parseFloat(inputPeso.value);
+
     try {
       await db.collection("alunos").doc(aluno.id).update(dadosAtualizados);
       await carregarAlunos();
@@ -340,19 +434,26 @@ function gerarRelatorio() {
   titulo.textContent = "Relatório de Alunos - HOS Jiu-Jitsu";
   relatorioImpressao.appendChild(titulo);
 
-  if (alunosCache.length === 0) {
+  if (alunosFiltrados.length === 0) {
     const p = document.createElement("p");
-    p.textContent = "Nenhum aluno cadastrado.";
+    p.textContent = "Nenhum aluno encontrado com os filtros aplicados.";
     relatorioImpressao.appendChild(p);
   } else {
+    const filtrosAtivos = [];
+    if (filtroNome.value.trim()) filtrosAtivos.push('Nome: "' + filtroNome.value.trim() + '"');
+    if (filtroFaixa.value) filtrosAtivos.push("Faixa: " + filtroFaixa.value);
+    if (filtroIdade.value) filtrosAtivos.push(filtroIdade.value === "menor" ? "Menores de 18" : "Maiores de 18");
+
     const p = document.createElement("p");
-    p.textContent = "Gerado em " + new Date().toLocaleDateString("pt-BR");
+    p.textContent = "Gerado em " + new Date().toLocaleDateString("pt-BR")
+      + " — " + alunosFiltrados.length + " aluno(s)"
+      + (filtrosAtivos.length ? " — Filtros: " + filtrosAtivos.join(", ") : "");
     relatorioImpressao.appendChild(p);
 
     const table = document.createElement("table");
     const thead = document.createElement("thead");
     const trHead = document.createElement("tr");
-    ["Aluno", "Faixa", "Nascimento", "Telefone", "Responsável", "Tel. responsável"].forEach((texto) => {
+    ["Aluno", "Faixa", "Graus", "Peso", "Nascimento", "Telefone", "Responsável", "Tel. responsável"].forEach((texto) => {
       const th = document.createElement("th");
       th.textContent = texto;
       trHead.appendChild(th);
@@ -361,11 +462,13 @@ function gerarRelatorio() {
     table.appendChild(thead);
 
     const tbody = document.createElement("tbody");
-    alunosCache.forEach((aluno) => {
+    alunosFiltrados.forEach((aluno) => {
       const tr = document.createElement("tr");
       [
         aluno.nomeCompleto,
         aluno.faixa,
+        formatarGraus(aluno.graus),
+        aluno.peso ? String(aluno.peso).replace(".", ",") + " kg" : "-",
         formatarData(aluno.dataNascimento),
         aluno.telefoneAluno || "-",
         aluno.nomeResponsavel || "-",
