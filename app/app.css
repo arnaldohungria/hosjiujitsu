@@ -1,13 +1,13 @@
 :root{
   --bg:#ffffff;
-  --bg-alt:#f6f2f9;
-  --line: rgba(28,18,33,0.12);
-  --text:#1c1a1e;
-  --text-dim:#655f6b;
-  --purple:#8c3aa8;
-  --purple-deep:#6e2a86;
-  --purple-light:#c473e0;
-  --purple-dark:#2c1336;
+  --bg-alt:#f5f5f4;
+  --line: rgba(20,20,20,0.10);
+  --text:#1c1c1c;
+  --text-dim:#666666;
+  --purple:#844c87;
+  --purple-deep:#5d325e;
+  --purple-light:#b897b9;
+  --purple-dark:#1c1c1c;
   --display: "Anton", Impact, sans-serif;
   --body: "Inter", -apple-system, sans-serif;
   --mono: "JetBrains Mono", monospace;
@@ -32,7 +32,8 @@ h1,h2{
 }
 
 .app-header{
-  background:var(--purple-dark);
+  background:var(--surface, #fff);
+  border-bottom:1px solid var(--line);
   padding:14px 24px;
   display:flex;
   align-items:center;
@@ -40,9 +41,9 @@ h1,h2{
 }
 
 .app-header .logo-wrap{display:flex; align-items:center; gap:12px;}
-.app-header img{height:38px; width:38px; object-fit:contain; border-radius:50%; background:#fff;}
-.app-header h1{color:#fff; font-size:1rem;}
-.app-header .sair{color:var(--purple-light); font-weight:600; font-size:.85rem; cursor:pointer; font-family:var(--mono);}
+.app-header img{height:38px; width:38px; object-fit:contain; border-radius:50%; background:#fff; border:1px solid var(--line);}
+.app-header h1{color:var(--text); font-size:1rem;}
+.app-header .sair{color:var(--purple); font-weight:600; font-size:.85rem; cursor:pointer; font-family:var(--mono);}
 
 .app-main{max-width:520px; margin:0 auto; padding:40px 20px;}
 .app-main.wide{max-width:1000px;}
