@@ -3,6 +3,7 @@ import { criarPagamentoPix, consultarPagamento } from "./mercadopago.js";
 
 const TOTAL_NUMEROS = 200;
 const EXPIRACAO_MS = 30 * 60 * 1000; // 30 minutos sem pagar libera o número de novo
+const STATEMENT_DESCRIPTOR = "HOSJIUJITSU";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -43,7 +44,11 @@ async function handleCriarPix(request, env) {
   if (!pedido) return json({ erro: "Pedido não encontrado." }, 404);
   if (pedido.status !== "pendente") return json({ erro: "Pedido já não está mais pendente." }, 409);
 
-  const pagamento = await criarPagamentoPix(env, { referenciaId: pedidoId, valor, descricao, deviceId });
+  const pagamento = await criarPagamentoPix(env, {
+    referenciaId: pedidoId, valor, descricao, deviceId,
+    nomeComprador: pedido.nomeComprador,
+    statementDescriptor: STATEMENT_DESCRIPTOR
+  });
 
   await patchDocument(env, "rifaPedidos/" + pedidoId, {
     pixCopiaECola: pagamento.pixCopiaECola,
@@ -71,7 +76,11 @@ async function handleCriarPixDoacao(request, env) {
   if (!doacao) return json({ erro: "Doação não encontrada." }, 404);
   if (doacao.status !== "pendente") return json({ erro: "Doação já não está mais pendente." }, 409);
 
-  const pagamento = await criarPagamentoPix(env, { referenciaId: doacaoId, valor, descricao, deviceId });
+  const pagamento = await criarPagamentoPix(env, {
+    referenciaId: doacaoId, valor, descricao, deviceId,
+    nomeComprador: doacao.nomeDoador,
+    statementDescriptor: STATEMENT_DESCRIPTOR
+  });
 
   await patchDocument(env, "doacoes/" + doacaoId, {
     pixCopiaECola: pagamento.pixCopiaECola,

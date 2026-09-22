@@ -1,6 +1,16 @@
 // Cliente mínimo da API do Mercado Pago (Pix) — usado tanto pela rifa quanto pelas doações livres.
 
-async function criarPagamentoPix(env, { referenciaId, valor, descricao, deviceId }) {
+// Divide um nome completo em primeiro/último nome — o Mercado Pago pontua a
+// qualidade da integração por enviar "payer.last_name" separado, mas nosso
+// formulário só coleta o nome completo numa caixa só.
+function dividirNome(nomeCompleto) {
+  const partes = (nomeCompleto || "").trim().split(/\s+/).filter(Boolean);
+  if (partes.length === 0) return { primeiro: "", ultimo: "" };
+  if (partes.length === 1) return { primeiro: partes[0], ultimo: partes[0] };
+  return { primeiro: partes[0], ultimo: partes.slice(1).join(" ") };
+}
+
+async function criarPagamentoPix(env, { referenciaId, valor, descricao, deviceId, nomeComprador, statementDescriptor }) {
   const headers = {
     Authorization: "Bearer " + env.MP_ACCESS_TOKEN,
     "Content-Type": "application/json",
@@ -12,6 +22,8 @@ async function criarPagamentoPix(env, { referenciaId, valor, descricao, deviceId
   // sem isso o PolicyAgent bloqueia com PA_UNAUTHORIZED_RESULT_FROM_POLICIES.
   if (deviceId) headers["X-meli-session-id"] = deviceId;
 
+  const { primeiro, ultimo } = dividirNome(nomeComprador);
+
   const resp = await fetch("https://api.mercadopago.com/v1/payments", {
     method: "POST",
     headers,
@@ -20,7 +32,25 @@ async function criarPagamentoPix(env, { referenciaId, valor, descricao, deviceId
       description: descricao,
       payment_method_id: "pix",
       external_reference: referenciaId,
-      payer: { email: "hos+" + referenciaId + "@hosjiujitsu.vercel.app" } // MP exige e-mail do pagador; não coletamos e-mail de quem compra/doa. ".invalid" (RFC 2606) é rejeitado pela validação deles, por isso usamos um domínio real que não recebe e-mail de verdade.
+      statement_descriptor: statementDescriptor,
+      // Campos abaixo não afetam o Pix em si, mas melhoram a "Qualidade da
+      // integração" no painel do Mercado Pago (reduz risco de bloqueio antifraude).
+      payer: {
+        email: "hos+" + referenciaId + "@hosjiujitsu.vercel.app", // MP exige e-mail do pagador; não coletamos e-mail de quem compra/doa. ".invalid" (RFC 2606) é rejeitado pela validação deles, por isso usamos um domínio real que não recebe e-mail de verdade.
+        first_name: primeiro || undefined,
+        last_name: ultimo || undefined
+      },
+      additional_info: {
+        items: [
+          {
+            id: referenciaId,
+            title: descricao,
+            description: descricao,
+            quantity: 1,
+            unit_price: valor
+          }
+        ]
+      }
     })
   });
 
