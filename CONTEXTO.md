@@ -33,7 +33,7 @@ navegador + um Cloudflare Worker para o Pix.
 | Peça | Onde |
 |---|---|
 | Código | GitHub `arnaldohungria/hosjiujitsu`, branch `main` |
-| Site no ar | Vercel, deploy automático a cada push na `main` (sem CLI, sem pasta `.vercel`). `hosjiujitsu.vercel.app`; o Arnaldo usa `www.hosjiujitsu.com.br` como endereço oficial |
+| Site no ar | Vercel, deploy automático a cada push na `main` (sem CLI, sem pasta `.vercel`). `hosjiujitsu.vercel.app`; endereço oficial `www.hosjiujitsu.com.br` (domínio conectado e no ar, confirmado pelo Arnaldo em 24/09/2026) |
 | Firebase | projeto `hosjiujitsu-app`, conta `arnaldo@live.jp` (Auth e-mail/senha + Firestore) |
 | Worker do Pix | `worker/` → Cloudflare Worker `hosjiujitsu-rifa`, conta `tatamepass@gmail.com`; cron a cada 10 min libera reservas de rifa com +30 min sem pagamento |
 | Segredos do Worker | `MP_ACCESS_TOKEN`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY` (via `wrangler secret put`, nunca no git) |
@@ -110,6 +110,9 @@ Faixas válidas: Branca, Cinza, Amarela, Laranja, Verde, Azul, Roxa, Marrom, Pre
 
 Mais recente primeiro. Entradas anteriores a 24/09/2026 foram reconstruídas do `git log`.
 
+### 2026-09-24 — Domínio confirmado
+- Sem mudança de código. O Arnaldo confirmou que `www.hosjiujitsu.com.br` já está no ar; pendência de conferência removida.
+
 ### 2026-09-24 — Ranking com pódio
 - `app/ranking.html`, `app/app.css`: os 3 primeiros viram um pódio (1º no centro com coroa, 2º à esquerda,
   3º à direita, círculo com a inicial do nome); do 4º em diante segue a lista numerada. Funciona com 1 ou 2
@@ -143,6 +146,5 @@ Mais recente primeiro. Entradas anteriores a 24/09/2026 foram reconstruídas do 
 ## Pendências em aberto
 
 - `app/conteudos.html` continua placeholder (vídeos de técnicas de jiu-jitsu: planejados, sem implementação).
-- Conferir se `www.hosjiujitsu.com.br` está servindo o site e se o certificado está ok.
 - Endereço definitivo da sede da associação (aguarda numeração predial da Prefeitura) — afeta o texto do site
   se o endereço mudar.
