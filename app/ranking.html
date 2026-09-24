@@ -81,6 +81,47 @@ function linhaRanking(posicao, primeiroNome, faixa, total, ehVoceMesmo) {
   return row;
 }
 
+const CLASSE_PODIO = ["gold", "silver", "bronze"];
+
+// Pódio dos 3 primeiros: 1º no centro (mais alto), 2º à esquerda, 3º à direita.
+// Mesmo cuidado do resto da página: só createElement/textContent.
+function colunaPodio(posicao, primeiroNome, faixa, total, ehVoceMesmo) {
+  const col = document.createElement("div");
+  col.className = "podio-col " + CLASSE_PODIO[posicao] + (ehVoceMesmo ? " mine" : "");
+
+  if (posicao === 0) {
+    const coroa = document.createElement("div");
+    coroa.className = "podio-coroa";
+    coroa.textContent = "👑";
+    col.appendChild(coroa);
+  }
+
+  const avatar = document.createElement("div");
+  avatar.className = "podio-avatar";
+  avatar.textContent = (primeiroNome || "?").charAt(0).toUpperCase();
+
+  const nome = document.createElement("div");
+  nome.className = "podio-nome";
+  nome.textContent = primeiroNome + (ehVoceMesmo ? " (você)" : "");
+
+  const beltTag = document.createElement("span");
+  beltTag.className = "belt-tag";
+  beltTag.textContent = faixa;
+
+  const count = document.createElement("div");
+  count.className = "podio-count";
+  const rotulo = document.createElement("span");
+  rotulo.textContent = total === 1 ? "presença" : "presenças";
+  count.append(document.createTextNode(String(total)), rotulo);
+
+  const bloco = document.createElement("div");
+  bloco.className = "podio-bloco";
+  bloco.textContent = String(posicao + 1);
+
+  col.append(avatar, nome, beltTag, count, bloco);
+  return col;
+}
+
 auth.onAuthStateChanged(async (user) => {
   if (!user) {
     window.location.href = "login.html";
@@ -104,11 +145,28 @@ auth.onAuthStateChanged(async (user) => {
       listaRanking.appendChild(p);
     } else {
       let apareceNoTop = false;
-      snap.docs.forEach((doc, i) => {
-        const r = doc.data();
-        const ehVoceMesmo = doc.id === user.uid;
+
+      // Desempate estável: mais presenças primeiro; empatou, ordem alfabética do primeiro nome.
+      const itens = snap.docs
+        .map((doc) => ({ id: doc.id, r: doc.data() }))
+        .sort((a, b) => (b.r.totalPresencas || 0) - (a.r.totalPresencas || 0)
+          || String(a.r.primeiroNome).localeCompare(String(b.r.primeiroNome), "pt-BR"));
+
+      const podio = document.createElement("div");
+      podio.className = "podio";
+      [1, 0, 2].forEach((pos) => { // ordem visual: prata, ouro, bronze
+        const item = itens[pos];
+        if (!item) return;
+        const ehVoceMesmo = item.id === user.uid;
         if (ehVoceMesmo) apareceNoTop = true;
-        listaRanking.appendChild(linhaRanking(i, r.primeiroNome, r.faixa, r.totalPresencas || 0, ehVoceMesmo));
+        podio.appendChild(colunaPodio(pos, item.r.primeiroNome, item.r.faixa, item.r.totalPresencas || 0, ehVoceMesmo));
+      });
+      listaRanking.appendChild(podio);
+
+      itens.slice(3).forEach((item, k) => {
+        const ehVoceMesmo = item.id === user.uid;
+        if (ehVoceMesmo) apareceNoTop = true;
+        listaRanking.appendChild(linhaRanking(k + 3, item.r.primeiroNome, item.r.faixa, item.r.totalPresencas || 0, ehVoceMesmo));
       });
 
       if (!apareceNoTop && meuDoc.exists) {
@@ -118,7 +176,7 @@ auth.onAuthStateChanged(async (user) => {
         titulo.className = "field-hint";
         titulo.textContent = "Sua colocação:";
         suaPosicao.appendChild(titulo);
-        suaPosicao.appendChild(linhaRanking(-1, "Você", meuDoc.data().faixa, meuTotal, true));
+        suaPosicao.appendChild(linhaRanking(-1, meuDoc.data().nomeCompleto.split(" ")[0], meuDoc.data().faixa, meuTotal, true));
         suaPosicao.querySelector(".ranking-pos").textContent = "-";
         suaPosicao.style.display = "block";
       }

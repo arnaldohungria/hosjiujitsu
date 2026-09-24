@@ -212,6 +212,30 @@ table.admin-table tr:hover td{background:var(--bg-alt); cursor:pointer;}
 .ranking-count .rotulo{font-size:.68rem; color:var(--text-dim); font-weight:400; display:block; text-transform:uppercase; letter-spacing:.05em;}
 .ranking-sua-posicao{margin-top:20px; padding-top:16px; border-top:2px solid var(--line);}
 
+/* Pódio do ranking: 1º no centro, 2º à esquerda, 3º à direita */
+.podio{display:flex; align-items:flex-end; justify-content:center; gap:8px; margin:8px 0 26px;}
+.podio-col{flex:1; max-width:140px; display:flex; flex-direction:column; align-items:center; text-align:center; min-width:0;}
+.podio-coroa{font-size:1.5rem; line-height:1; margin-bottom:-2px;}
+.podio-avatar{
+  width:58px; height:58px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+  font-family:var(--display); font-size:1.6rem; color:#fff; background:var(--purple-deep);
+  border:4px solid #cfd8dc; box-shadow:0 3px 10px rgba(0,0,0,.15);
+}
+.podio-col.gold .podio-avatar{width:72px; height:72px; font-size:2rem; border-color:#f2c94c;}
+.podio-col.bronze .podio-avatar{border-color:#e0a878;}
+.podio-col.mine .podio-avatar{box-shadow:0 0 0 3px var(--purple-light);}
+.podio-nome{font-weight:800; margin-top:8px; font-size:1rem; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.podio-col .belt-tag{margin-top:4px;}
+.podio-count{font-family:var(--mono); font-weight:700; color:var(--purple-deep); font-size:1.05rem; margin:6px 0 8px; line-height:1.1;}
+.podio-count span{display:block; font-size:.6rem; color:var(--text-dim); font-weight:400; text-transform:uppercase; letter-spacing:.05em;}
+.podio-bloco{
+  width:100%; border-radius:12px 12px 0 0; display:flex; align-items:flex-start; justify-content:center;
+  padding-top:8px; font-family:var(--display); font-size:2.2rem;
+}
+.podio-col.gold .podio-bloco{height:118px; background:linear-gradient(#f7dc7a,#f2c94c); color:#5c4400;}
+.podio-col.silver .podio-bloco{height:84px; background:linear-gradient(#dde5e9,#cfd8dc); color:#37474f;}
+.podio-col.bronze .podio-bloco{height:62px; background:linear-gradient(#ebbf98,#e0a878); color:#5c3a1e;}
+
 .avatar, .avatar-placeholder{
   width:88px; height:88px; border-radius:50%; border:2px solid var(--line); flex-shrink:0;
 }
