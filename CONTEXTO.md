@@ -120,6 +120,17 @@ Faixas válidas: Branca, Cinza, Amarela, Laranja, Verde, Azul, Roxa, Marrom, Pre
 
 Mais recente primeiro. Entradas anteriores a 24/09/2026 foram reconstruídas do `git log`.
 
+### 2026-09-26 (4) — Mesmo visual na Área do Aluno e no painel do professor
+- Pedido do Arnaldo depois de aprovar o redesign do site público. `app/app.css` reescrito com as mesmas classes
+  (o JS das páginas depende delas): cabeçalho fixo translúcido, abas do aluno em pílula, cartões arredondados,
+  campos com foco roxo, botões em pílula com degradê, tabelas com cabeçalho preto, avisos do mural em cartões,
+  pódio/ranking e avatares com degradê; regras de impressão do relatório mantidas iguais. Nenhum HTML de `app/`
+  mudou, exceto `admin-rifa.html`: agora carrega `../style.css` **antes** do `app.css` (só pela cartela), então o
+  visual do app prevalece lá; com isso saiu do `style.css` o `.card` antigo (cantos cortados) que só servia ao painel.
+- Fileiras só de botões de navegação do painel (sem `h2`) ficam alinhadas à esquerda via `:has()`; navegador
+  antigo sem `:has()` só volta ao espaçamento anterior.
+- Testado com página de prévia temporária (não versionada) + login/cadastro reais. Só front-end.
+
 ### 2026-09-26 (3) — Redesign visual do site público (só estética)
 - Pedido do Arnaldo: "deixar mais bonito" sem mexer em textos, fotos, rifa nem Área do Aluno. Mantidos a paleta
   do logo e o nav/rodapé claros (decisão de 16/09).
