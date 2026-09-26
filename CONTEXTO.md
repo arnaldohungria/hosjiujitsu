@@ -51,7 +51,7 @@ push, conferir a conta ativa (`gh auth status`) antes de qualquer outra coisa.
 
 ## Páginas
 
-Público: `index.html` (institucional), `rifa.html` (rifa solidária, 200 números, R$ 6,00 cada),
+Público: `index.html` (institucional), `rifa.html` (rifa solidária, 600 números, R$ 6,00 cada; prêmio: camisa de goleiro do Palmeiras autografada),
 `doar.html` (doação livre via Pix), `cadastro-passo-a-passo.html/.pdf` (guia do cadastro).
 
 Área do Aluno (`app/`): `cadastro.html`, `login.html`, `perfil.html` (Meus Dados: edição, foto,
@@ -74,7 +74,7 @@ impresso), `admin-chamada.html` (chamada manual por data), `admin-mural.html` (a
 - `ranking/{uid}` — só `primeiroNome`, `faixa`, `totalPresencas`, legível por qualquer aluno logado
   (separado de `alunos` de propósito para não expor RG/CPF/telefone aos colegas). Mantido pelo admin na chamada.
 - `avisos/{id}` — mural. Aluno logado lê; admin cria/edita/apaga.
-- `rifaNumeros/{001..200}` — existência = reservado/pago (ausência = livre; reserva atômica via batch).
+- `rifaNumeros/{001..600}` — existência = reservado/pago (ausência = livre; reserva atômica via batch).
 - `rifaPedidos/{id}` — 1 pedido = 1 cobrança Pix de N números. `get` público (o comprador acompanha o
   próprio pedido), `list` só admin.
 - `doacoes/{id}` — mesma ideia da rifa, valor livre (R$ 1 a 50.000).
@@ -85,7 +85,10 @@ Faixas válidas: Branca, Cinza, Amarela, Laranja, Verde, Azul, Roxa, Marrom, Pre
 ## Decisões que não são óbvias no código
 
 - Muitas crianças não têm celular ⇒ **não existe check-in pelo aluno**; presença é chamada manual do professor.
-- Rifa: 200 números, R$ 6,00, prêmio R$ 200,00 no Pix, sorteio em live; renda vai para kimonos de crianças sem condições.
+- Rifa: 600 números (eram 200 até 26/09/2026), R$ 6,00, prêmio: camisa oficial de goleiro do Palmeiras autografada
+  pelo ex-goleiro Sérgio (antes era R$ 200,00 no Pix), sorteio em live; renda vai para kimonos de crianças sem
+  condições. Quem comprou antes da troca manteve o mesmo número. O nome do deputado que intermediou a camisa
+  **não** aparece na página de propósito (período eleitoral).
 - Cota de patrocínio (material de captação, fora do repo) é **única**, mensal ou anual, valor "sob consulta".
 - Paleta redefinida em 16/09/2026 a partir do roxo real do logo (`#844c87`), com nav/footer **claros**.
   Isso substituiu a decisão anterior de nav/footer roxo-escuros. Tokens em `style.css` e `app/app.css`.
@@ -101,6 +104,13 @@ Faixas válidas: Branca, Cinza, Amarela, Laranja, Verde, Azul, Roxa, Marrom, Pre
 - **Firestore REST em lote (Worker):** os endpoints `:commit` e `:batchGet` exigem o nome do recurso
   *sem* o prefixo `https://firestore.googleapis.com/v1/` (helper `resourceName()` em `worker/src/firestore.js`).
   Esse erro já deixou pagamentos aprovados presos como "pendente" (corrigido em 05/08/2026).
+- **Deploy do Worker só de clone atualizado.** O `wrangler deploy` publica o que está no disco: de um clone
+  atrás de `origin/main` ele desfaz mudanças já feitas (em 26/09/2026 isso derrubou por alguns minutos o
+  antifraude de 22/09 em produção; refeito em seguida). Sempre `git fetch` + atualizar antes.
+- `wrangler login` reaproveita a sessão da Cloudflare já aberta no navegador e pode entrar na conta errada
+  (`arnaldo@live.jp` em vez de `tatamepass@gmail.com`). Conferir com `wrangler whoami` (conta certa = ID
+  `40b925804bbffd00cddcfa4dc2a31096`); se errada: `wrangler logout` e `wrangler login --browser=false`, abrindo
+  o link numa janela anônima.
 - Logo depois de um deploy do Worker, a Cloudflare pode falhar 1–2 requisições por propagação de borda; não é bug.
 - Página pública que carregue `app/firebase-init.js` precisa carregar também `firebase-auth-compat.js`.
 - Docs de teste antigos em `alunos`/`rifaNumeros`/`rifaPedidos` não podem ser apagados por cliente
@@ -109,6 +119,21 @@ Faixas válidas: Branca, Cinza, Amarela, Laranja, Verde, Azul, Roxa, Marrom, Pre
 ## Histórico
 
 Mais recente primeiro. Entradas anteriores a 24/09/2026 foram reconstruídas do `git log`.
+
+### 2026-09-26 — Rifa: prêmio vira camisa autografada e sobe de 200 para 600 números
+- Pedido do Arnaldo: prêmio passa a ser uma camisa oficial de goleiro do Palmeiras (loja oficial, Allianz Parque)
+  autografada pelo ex-goleiro Sérgio; número continua R$ 6,00; rifa de 200 → 600 números; quem já comprou continua
+  concorrendo com o mesmo número (1–200 não mudam; 201–600 entram livres, pois ausência de documento = livre).
+- `firestore.rules`: `numeroRifaValido` aceita 1..600 (limite de 200 é *por pedido*, batch do cliente aceita
+  no máx. 500 operações). `worker/src/index.js`: `TOTAL_NUMEROS` 600 e o cron lê em lotes de 300 (`:batchGet`)
+  e grava em lotes de 400 (`:commit`, máx. 500). `rifa.html`: título/prêmio, aviso "rifa ampliada", 600 tiles.
+  `app/admin-rifa.html`: cartela de 600.
+- Deploys: rules (`arnaldo@live.jp`) e Worker (`tatamepass@gmail.com`) feitos à parte do push. O Worker foi
+  publicado uma primeira vez de um clone atrasado (sem o antifraude de 22/09) e republicado logo depois do
+  rebase — ver armadilha acima.
+- Pendente/decisões do Arnaldo: avisar quem já comprou (o prêmio mudou) e oferecer devolução a quem quiser;
+  confirmar se a rifa exige autorização (SPA/Ministério da Fazenda); foto da camisa pra página; nome do
+  candidato que intermediou fica fora do site.
 
 ### 2026-09-24 — Domínio confirmado
 - Sem mudança de código. O Arnaldo confirmou que `www.hosjiujitsu.com.br` já está no ar; pendência de conferência removida.

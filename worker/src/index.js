@@ -1,9 +1,11 @@
 import { patchDocument, getDocument, batchGetDocuments, commitWrites, writeUpdate, writeDelete } from "./firestore.js";
 import { criarPagamentoPix, consultarPagamento } from "./mercadopago.js";
 
-const TOTAL_NUMEROS = 200;
+const TOTAL_NUMEROS = 600; // ampliada de 200 pra 600 em 2026-09 (números 1-200 já vendidos seguem valendo)
 const EXPIRACAO_MS = 30 * 60 * 1000; // 30 minutos sem pagar libera o número de novo
 const STATEMENT_DESCRIPTOR = "HOSJIUJITSU";
+const LOTE_LEITURA = 300; // documentos por chamada :batchGet
+const LOTE_GRAVACAO = 400; // operações por chamada :commit (o Firestore aceita no máximo 500)
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -141,14 +143,19 @@ async function handleWebhookMercadoPago(request, env) {
   return json({ ok: true });
 }
 
-// Roda a cada 10 min: varre os 200 números, libera reservas com mais de 30 min
+// Roda a cada 10 min: varre os 600 números, libera reservas com mais de 30 min
 // sem pagamento (o comprador não terminou/desistiu do Pix) e marca o pedido
-// correspondente como expirado.
+// correspondente como expirado. Lê e grava em lotes porque 600 números passam
+// do limite de operações por chamada do Firestore num cenário de muitas
+// reservas expirando ao mesmo tempo.
 async function handleScheduled(env) {
   if (!env.FIREBASE_CLIENT_EMAIL || !env.FIREBASE_PRIVATE_KEY) return; // Worker ainda não configurado
 
   const paths = Array.from({ length: TOTAL_NUMEROS }, (_, i) => "rifaNumeros/" + formatarNumero(i + 1));
-  const numeros = await batchGetDocuments(env, paths);
+  const numeros = {};
+  for (let i = 0; i < paths.length; i += LOTE_LEITURA) {
+    Object.assign(numeros, await batchGetDocuments(env, paths.slice(i, i + LOTE_LEITURA)));
+  }
 
   const agora = Date.now();
   const writes = [];
@@ -170,7 +177,9 @@ async function handleScheduled(env) {
     }
   }
 
-  await commitWrites(env, writes);
+  for (let i = 0; i < writes.length; i += LOTE_GRAVACAO) {
+    await commitWrites(env, writes.slice(i, i + LOTE_GRAVACAO));
+  }
 }
 
 export default {

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Rifa Solidária — HOS Jiu-Jitsu</title>
-<meta name="description" content="Rifa solidária do HOS Jiu-Jitsu: R$ 200 no Pix, renda revertida na compra de kimonos para crianças que não têm condições. Números a R$ 6,00.">
+<meta name="description" content="Rifa solidária do HOS Jiu-Jitsu: concorra a uma camisa oficial de goleiro do Palmeiras autografada pelo ex-goleiro Sérgio. Renda revertida na compra de kimonos para crianças que não têm condições. Números a R$ 6,00.">
 
 <link rel="icon" type="image/png" href="assets/logo.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -40,7 +40,9 @@
     <div class="section-inner">
       <div class="section-head center">
         <p class="eyebrow">Rifa solidária</p>
-        <h1 class="rifa-title">200 NÚMEROS<br><span>R$ 200,00 NO PIX</span></h1>
+        <h1 class="rifa-title">600 NÚMEROS<br><span>CAMISA DE GOLEIRO DO PALMEIRAS</span></h1>
+        <p class="rifa-sub">🏆 <strong>O prêmio:</strong> uma camisa oficial de goleiro do Palmeiras, comprada na loja oficial do clube no Allianz Parque e autografada pelo ex-goleiro Sérgio.</p>
+        <p class="rifa-sub">📢 <strong>Rifa ampliada!</strong> Agora são 600 números. Quem já comprou continua concorrendo com o mesmo número.</p>
         <p class="rifa-sub">🙏 Sua ajuda pode vestir um sonho! 🥋</p>
         <p class="rifa-sub">Criamos esta rifa com um propósito muito especial: arrecadar recursos para comprar quimonos para as crianças do nosso projeto social que não têm condições de adquirir o próprio.</p>
         <p class="rifa-sub">Cada número vendido é uma oportunidade de transformar a vida de uma criança por meio do esporte, da disciplina e da esperança.</p>
@@ -111,7 +113,7 @@
 <script src="https://sdk.mercadopago.com/js/v2"></script>
 <script>
 const WORKER_URL = "https://hosjiujitsu-rifa.academiaplus.workers.dev";
-const TOTAL_NUMEROS = 200;
+const TOTAL_NUMEROS = 600;
 const PRECO_NUMERO = 6;
 
 const rifaGrid = document.getElementById("rifaGrid");
@@ -132,7 +134,7 @@ function showMsg(text, type) {
   msg.className = "msg show " + type;
 }
 
-// Estado ao vivo: mapa "001".."200" -> {status: 'reservado'|'pago'} ou undefined (= disponível).
+// Estado ao vivo: mapa "001".."600" -> {status: 'reservado'|'pago'} ou undefined (= disponível).
 let estadoNumeros = {};
 const selecionados = new Set();
 let pedidoAtivo = false;

@@ -149,7 +149,7 @@ async function deleteDocument(env, path) {
   if (!resp.ok && resp.status !== 404) throw new Error("Falha ao apagar do Firestore (" + path + "): " + (await resp.text()));
 }
 
-// Lê vários documentos numa única chamada (usado pelo cron, que varre os 200
+// Lê vários documentos numa única chamada (usado pelo cron, que varre todos os
 // números da rifa — uma chamada por número estouraria o limite de subrequests
 // do Worker). Retorna um mapa path -> campos (ou null se o documento não existe).
 async function batchGetDocuments(env, paths) {

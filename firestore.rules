@@ -84,7 +84,9 @@ service cloud.firestore {
 
     // ===== Rifa (compra pública, sem cadastro/login) =====
     //
-    // Cada número (1 a 200) só vira documento quando é reservado — a ausência do
+    // Cada número (1 a 600 — ampliada de 200 em 2026-09 com a troca do prêmio pra
+    // camisa; os números 1-200 já vendidos seguem valendo) só vira documento
+    // quando é reservado — a ausência do
     // documento É o estado "disponível". Isso dá reserva atômica "de graça": o
     // visitante reserva N números com um único batch write contendo um `create`
     // por número; se qualquer um deles já existir (outra pessoa reservou antes),
@@ -93,7 +95,7 @@ service cloud.firestore {
     // (Cloudflare, autenticado como service account — não passa pelas rules)
     // marca como pago ou libera reservas expiradas.
     function numeroRifaValido(numero, dados) {
-      return dados.numero is int && dados.numero == int(numero) && dados.numero >= 1 && dados.numero <= 200
+      return dados.numero is int && dados.numero == int(numero) && dados.numero >= 1 && dados.numero <= 600
         && dados.status == 'reservado'
         && dados.pedidoId is string && dados.pedidoId.size() > 0
         && dados.reservadoEm == request.time;
@@ -108,7 +110,9 @@ service cloud.firestore {
     // Um pedido cobre 1+ números pagos numa única cobrança Pix. Criado pelo
     // visitante (sem login); os campos do Pix (QR code etc.) só existem depois
     // que o Worker consulta o Mercado Pago — por isso `create` exige que eles
-    // ainda não estejam presentes.
+    // ainda não estejam presentes. O limite de 200 é POR PEDIDO (não o total da
+    // rifa, que é 600): o navegador grava pedido + números num único batch, que
+    // aceita no máximo 500 operações.
     function pedidoRifaValido(dados) {
       return dados.numeros is list && dados.numeros.size() > 0 && dados.numeros.size() <= 200
         && dados.nomeComprador is string && dados.nomeComprador.size() > 0 && dados.nomeComprador.size() < 100

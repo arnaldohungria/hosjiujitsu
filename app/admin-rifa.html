@@ -36,11 +36,11 @@
     </div>
 
     <div class="card">
-      <h2>Cartela (200 números)</h2>
+      <h2>Cartela (600 números)</h2>
       <div class="rifa-resumo-admin" id="resumoNumeros">
         <div class="resumo-item"><span class="resumo-num" id="resumoVendidos">0</span><span class="resumo-label">Vendidos</span></div>
         <div class="resumo-item"><span class="resumo-num" id="resumoReservados">0</span><span class="resumo-label">Reservados</span></div>
-        <div class="resumo-item"><span class="resumo-num" id="resumoDisponiveis">200</span><span class="resumo-label">Disponíveis</span></div>
+        <div class="resumo-item"><span class="resumo-num" id="resumoDisponiveis">600</span><span class="resumo-label">Disponíveis</span></div>
       </div>
       <div class="rifa-legenda">
         <span><i class="rifa-dot disponivel"></i> Disponível</span>
@@ -82,7 +82,7 @@ const resumoVendidos = document.getElementById("resumoVendidos");
 const resumoReservados = document.getElementById("resumoReservados");
 const resumoDisponiveis = document.getElementById("resumoDisponiveis");
 
-const TOTAL_NUMEROS = 200;
+const TOTAL_NUMEROS = 600;
 const statusNumeros = {}; // numero -> "reservado" | "pago"
 
 btnSair.addEventListener("click", () => auth.signOut().then(() => window.location.href = "login.html"));
