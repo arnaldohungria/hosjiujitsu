@@ -120,6 +120,12 @@ Faixas válidas: Branca, Cinza, Amarela, Laranja, Verde, Azul, Roxa, Marrom, Pre
 
 Mais recente primeiro. Entradas anteriores a 24/09/2026 foram reconstruídas do `git log`.
 
+### 2026-09-26 (2) — Rifa: ajuste de título e remoção do aviso "Rifa ampliada"
+- `rifa.html`: título agora é só "Camisa Oficial / autografada pelo Goleiro Sérgio" (sai o "600 NÚMEROS" e o
+  "Camisa de goleiro do Palmeiras"); removido o parágrafo "Rifa ampliada! Agora são 600 números. Quem já comprou
+  continua concorrendo com o mesmo número." (decisão do Arnaldo). A rifa continua com 600 números; só deixou de
+  ser anunciado na página. Só front-end (push na `main`), sem deploy de rules/Worker.
+
 ### 2026-09-26 — Rifa: prêmio vira camisa autografada e sobe de 200 para 600 números
 - Pedido do Arnaldo: prêmio passa a ser uma camisa oficial de goleiro do Palmeiras (loja oficial, Allianz Parque)
   autografada pelo ex-goleiro Sérgio; número continua R$ 6,00; rifa de 200 → 600 números; quem já comprou continua
