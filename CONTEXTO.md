@@ -120,6 +120,20 @@ Faixas válidas: Branca, Cinza, Amarela, Laranja, Verde, Azul, Roxa, Marrom, Pre
 
 Mais recente primeiro. Entradas anteriores a 24/09/2026 foram reconstruídas do `git log`.
 
+### 2026-09-26 (3) — Redesign visual do site público (só estética)
+- Pedido do Arnaldo: "deixar mais bonito" sem mexer em textos, fotos, rifa nem Área do Aluno. Mantidos a paleta
+  do logo e o nav/rodapé claros (decisão de 16/09).
+- `style.css` reescrito: botões em pílula, sombras/cantos arredondados, hero em duas colunas com as fotos
+  `turma-04` e `conquistas-01` (reaproveitadas, decorativas), galeria em mosaico, seção do Professor escura
+  (`.section-dark`) com faixa preta com ponteira vermelha, horários em cartões, contato com hover roxo,
+  cartela da rifa com estados mais claros (reservado listrado, vendido preto), resumo flutuante e formulário em cartão.
+- `index.html`: só estrutura (wrapper `.hero-grid` + `.hero-media`, classe `manifesto-foto` no lugar do style
+  inline, `#professor` vira `section-dark`). `script.js`: animação de entrada ao rolar (desliga sem JS ou com
+  "reduzir movimento"). `rifa.html`/`doar.html`: sem alteração de HTML nem de lógica.
+- `app/admin-rifa.html` carrega `style.css` depois do `app.css`: tokens antigos mantidos com o mesmo valor e
+  `.card` intocado; lá só mudou o visual da cartela/legenda. Demais páginas `app/` não usam `style.css`.
+- Só front-end (push na `main`), sem deploy de rules/Worker.
+
 ### 2026-09-26 (2) — Rifa: ajuste de título e remoção do aviso "Rifa ampliada"
 - `rifa.html`: título agora é só "Camisa Oficial / autografada pelo Goleiro Sérgio" (sai o "600 NÚMEROS" e o
   "Camisa de goleiro do Palmeiras"); removido o parágrafo "Rifa ampliada! Agora são 600 números. Quem já comprou
